@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
+  "input": "libs/api/swaggers/swagger-rocket-core.json",
+  "output": "libs/api/src/lib/rocket-core",
+  "module": "RocketCoreApiModule",
+  "modelPrefix": "Core",
+  "services": true,
+  "servicePrefix": "Core",
+  "baseService": "CoreBaseService",
+  "requestBuilder": "CoreRequestBuilder",
+  "configuration": "CoreApiConfiguration",
+  "indexFile": true,
+  "promises": false
+}

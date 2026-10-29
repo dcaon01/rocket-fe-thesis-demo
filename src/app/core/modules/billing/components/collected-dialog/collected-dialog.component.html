@@ -1,0 +1,22 @@
+<!-- hidden: the dialog opens in an overlay, its host would only add a gap -->
+<hlm-dialog #dialog class="hidden">
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+    @if (pending(); as entry) {
+      @if (entry.charge; as charge) {
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>{{ entry.collected ? 'Segnare da incassare la scadenza?' : 'Segnare incassata la scadenza?' }}</h3>
+          <p hlmDialogDescription>
+            La scadenza del {{ entry.dueDate | date:'dd/MM/yyyy' }} di <strong>{{ charge.description }}</strong> di {{ charge.companyName }}
+            {{ entry.collected ? 'torna da incassare ed esce dalle fatture.' : 'risulta incassata ed entra nelle fatture.' }}
+          </p>
+        </hlm-dialog-header>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" (click)="close()" [disabled]="isSaving()">Annulla</button>
+          <button hlmBtn (click)="confirm()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Caricamento...' : 'Conferma' }}
+          </button>
+        </hlm-dialog-footer>
+      }
+    }
+  </hlm-dialog-content>
+</hlm-dialog>

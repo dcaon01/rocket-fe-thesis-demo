@@ -1,0 +1,9 @@
+<!-- Creating, the chevrons lead through the sections, the confirm button in place of the forward one on the last; editing, only the actions -->
+<div class="flex flex-row flex-wrap items-center gap-2">
+  @if (steps().incremental()) {
+    <rocket-step-arrows [steps]="steps()" [withNext]="!steps().isLast()" />
+  }
+  @if (!steps().incremental() || steps().isLast()) {
+    <ng-content />
+  }
+</div>

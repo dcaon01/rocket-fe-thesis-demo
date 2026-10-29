@@ -1,0 +1,117 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Template" description="Gestisci i modelli di offerte, contratti e schede cliente.">
+    @if (canManage()) {
+      <button hlmBtn size="sm" (click)="goToCreateTemplate()">
+        Crea template
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <form [formGroup]="templatesFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+    <!-- Search -->
+    <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+      <label hlmLabel for="search">Cerca</label>
+      <hlm-input-group>
+        <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+        <input type="text" id="search" placeholder="Nome del template" hlmInputGroupInput formControlName="search" autocomplete="off" />
+      </hlm-input-group>
+    </div>
+
+    <!-- Type -->
+    <div class="flex flex-col gap-2 min-w-44">
+      <label hlmLabel for="type">Tipo</label>
+      <rocket-multi-select-filter buttonId="type" formControlName="type" [options]="typeOptions" />
+    </div>
+
+    <!-- Status -->
+    <div class="flex flex-col gap-2 min-w-44">
+      <label hlmLabel for="status">Stato</label>
+      <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 items-end">
+      <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+      @if (isFiltered()) {
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr class="bg-background hover:bg-background">
+          <th hlmTh>Nome</th>
+          <th hlmTh>Tipo</th>
+          <th hlmTh>Ambito</th>
+          <th hlmTh>Formato</th>
+          <th hlmTh>Stato</th>
+          <th hlmTh>Pubblicato il</th>
+          <th hlmTh></th>
+        </tr>
+      </thead>
+      @if (pager.items().length > 0) {
+        <tbody hlmTBody>
+          @for (template of pager.items(); track template.id) {
+            <tr hlmTr>
+              <td hlmTd>{{ template.name }}</td>
+              <td hlmTd>{{ template.type | templateType }}</td>
+              <td hlmTd>
+                @if (template.channel) {
+                  {{ template.channel | salesChannel }}
+                } @else {
+                  Unico
+                }
+              </td>
+              <td hlmTd>{{ template.format }}</td>
+              <td hlmTd><span hlmBadge variant="outline" rocketTemplateStatus [status]="template.status">{{ template.status | templateStatus }}</span></td>
+              <td hlmTd>{{ template.publishedAt ? (template.publishedAt | date:'dd/MM/yyyy') : '-' }}</td>
+              <td hlmTd class="text-right flex justify-end items-center gap-1">
+                @if (canManage() && template.status === 'DRAFT') {
+                  <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina template" aria-label="Elimina template" (click)="openDeleteDialog(template)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Modifica template" aria-label="Modifica template" (click)="goToTemplate(template)"><ng-icon name="lucidePencil" size="16" /></button>
+                } @else {
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Apri template" aria-label="Apri template" (click)="goToTemplate(template)"><ng-icon name="lucideEye" size="16" /></button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      } @else {
+        <caption hlmCaption>
+          <hlm-empty>
+            <hlm-empty-header>
+              <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+              <p hlmEmptyDescription>Nessun template trovato.</p>
+            </hlm-empty-header>
+          </hlm-empty>
+        </caption>
+      }
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>
+
+<!-- Delete dialog -->
+<hlm-dialog #deleteDialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare la bozza?</h3>
+      <p hlmDialogDescription>
+        La bozza <strong>{{ selectedTemplate()?.name }}</strong> verrà eliminata insieme al suo file.<br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" (click)="closeDeleteDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteTemplate()" [disabled]="isLoading()">{{ isLoading() ? 'Caricamento...' : 'Elimina' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

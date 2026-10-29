@@ -1,0 +1,12 @@
+<span class="rk-icon-tile size-8"><ng-icon [name]="icon()" size="16" /></span>
+<div class="flex flex-col gap-1.5 min-w-0">
+  <span hlmLabel>{{ label() }}</span>
+  @if (value(); as v) {
+    <span class="text-base font-medium break-all">{{ v }}</span>
+  } @else {
+    <span class="text-base text-muted-foreground">-</span>
+  }
+</div>
+@if (value(); as v) {
+  <rocket-copy-button [value]="v" />
+}

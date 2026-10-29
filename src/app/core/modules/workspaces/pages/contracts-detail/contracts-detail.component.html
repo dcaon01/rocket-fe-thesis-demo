@@ -1,0 +1,341 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="contract()?.code ?? 'Dettaglio contratto'" description="Segui postazioni, pagamento e documenti del contratto.">
+    @if (contract()?.status; as status) {
+      <span headerMeta hlmBadge variant="outline" rocketContractStatus [status]="status">{{ status | contractStatus }}</span>
+    }
+    @if (contract()?.accessSuspendedAt; as suspendedAt) {
+      <span headerMeta hlmBadge variant="outline" [class]="suspendedBadgeClass">Accesso sospeso dal {{ suspendedAt | date:'dd/MM/yyyy' }}</span>
+    }
+    @if (postponedUntil(); as until) {
+      <span headerMeta hlmBadge variant="outline" [class]="postponedBadgeClass">Sospensione rimandata al {{ until | date:'dd/MM/yyyy' }}</span>
+    }
+    @if (awaitsPayment() && !contract()?.accessSuspendedAt) {
+      <span headerMeta hlmBadge variant="outline" [class]="paymentBadgeClass">Pagamento non attivato</span>
+    }
+
+    <!-- Actions menu -->
+    @if (hasMenuActions() && isInForce()) {
+      <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+        <ng-icon name="lucideEllipsisVertical" size="18" />
+      </button>
+      <ng-template #actionsMenu>
+        <hlm-dropdown-menu>
+          @if (canCancel() && contract()?.status === ContractStatus.Active && contract()?.renewalDate) {
+            <button hlmDropdownMenuItem (click)="openActionDialog('terminate')">
+              <ng-icon name="lucideSquareArrowOutUpRight" class="mr-2 h-4 w-4" />
+              <span>Registra disdetta</span>
+            </button>
+          }
+          @if (canManage() && contract()?.status === ContractStatus.Terminating && !contract()?.financed) {
+            <button hlmDropdownMenuItem (click)="openActionDialog('withdraw')">
+              <ng-icon name="lucideRotateCcw" class="mr-2 h-4 w-4" />
+              <span>Ritira disdetta</span>
+            </button>
+          }
+          @if (canManageAccess()) {
+            @if (contract()?.accessSuspendedAt) {
+              <button hlmDropdownMenuItem (click)="openActionDialog('restore')">
+                <ng-icon name="lucideLockOpen" class="mr-2 h-4 w-4" />
+                <span>Riattiva accessi</span>
+              </button>
+            } @else {
+              <button hlmDropdownMenuItem (click)="openActionDialog('postpone')">
+                <ng-icon name="lucideCalendarClock" class="mr-2 h-4 w-4" />
+                <span>Rimanda sospensione</span>
+              </button>
+              <button hlmDropdownMenuItem (click)="openActionDialog('suspend')">
+                <ng-icon name="lucideLock" class="mr-2 h-4 w-4" />
+                <span>Sospendi accessi</span>
+              </button>
+            }
+          }
+          @if (canTerminateNow()) {
+            <button hlmDropdownMenuItem (click)="openActionDialog('terminateNow')">
+              <ng-icon name="lucideCircleStop" class="mr-2 h-4 w-4" />
+              <span>Cessa ora</span>
+            </button>
+          }
+        </hlm-dropdown-menu>
+      </ng-template>
+    }
+
+    <!-- Primary button: the document of the contract -->
+    <button hlmBtn [disabled]="!contract()" (click)="openDocument()">
+      <ng-icon name="lucideFileText" size="16" />
+      Apri documento
+    </button>
+  </rocket-page-header>
+
+  <!-- Sections of the contract -->
+  @if (contract(); as contract) {
+    <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+      <!-- Sidebar: sezioni -->
+      <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+        <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+      </aside>
+
+      <!-- Right content -->
+      <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="['seats', 'payment'].includes(steps.activeTab()) ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+        <!-- Contract -->
+        <div hlmTabsContent="contract" class="flex flex-col gap-6 animate-rk-rise">
+          <h2 hlmCardTitle class="text-lg font-semibold">Contratto</h2>
+          <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+            <!-- Company -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Azienda</span>
+              <a class="text-base font-medium min-h-9 flex items-center underline-offset-4 hover:underline" [routerLink]="['/companies/edit', contract.companyId]">{{ contract.companyName }}</a>
+            </div>
+
+            <!-- Plan -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Piano</span>
+              @if (plan(); as plan) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ plan.name }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            </div>
+
+            <!-- Tenant -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Tenant</span>
+              <a class="text-base font-medium min-h-9 flex items-center gap-1 underline-offset-4 hover:underline" [routerLink]="['/products/workspaces', productId, 'tenants', 'edit', contract.tenantId]">
+                Apri tenant
+                <ng-icon name="lucideExternalLink" size="14" />
+              </a>
+            </div>
+
+            <!-- Seats -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Postazioni</span>
+              <span class="text-base font-medium min-h-9 flex items-center">{{ contract.seats }}</span>
+            </div>
+
+            <!-- Renewal amount -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Importo annuo del rinnovo</span>
+              @if (contract.renewalAmountCents !== undefined && contract.renewalAmountCents !== null) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ contract.renewalAmountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            </div>
+
+            <!-- Notice -->
+            <div class="flex flex-col gap-2">
+              <span hlmLabel>Preavviso per la disdetta</span>
+              <span class="text-base font-medium min-h-9 flex items-center">{{ contract.noticeDays }} giorni</span>
+            </div>
+          </div>
+
+          <!-- Dates, on a timeline: the ones passed are filled -->
+          <div class="flex flex-col gap-4 border-t pt-6">
+            <h3 class="text-sm font-semibold">Date</h3>
+            <div class="relative w-full flex justify-between gap-x-8">
+              <span class="absolute left-2 right-2 top-[7px] h-0.5 bg-border"></span>
+              <!-- Acceptance -->
+              <div class="relative flex flex-col gap-1 pt-7">
+                <span class="absolute top-0 left-0 size-4 rounded-full border-2" [class]="isPast(contract.acceptedAt) ? 'bg-foreground border-foreground' : 'bg-card border-muted-foreground'"></span>
+                <span hlmLabel>Accettato il</span>
+                @if (contract.acceptedAt) {
+                  <span class="text-base font-medium">{{ contract.acceptedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground">Non ancora</span>
+                }
+              </div>
+
+              <!-- Start date -->
+              <div class="relative flex flex-col items-center gap-1 pt-7 text-center">
+                <span class="absolute top-0 left-1/2 -translate-x-1/2 size-4 rounded-full border-2" [class]="isPast(contract.startDate) ? 'bg-foreground border-foreground' : 'bg-card border-muted-foreground'"></span>
+                <span hlmLabel>Decorrenza</span>
+                @if (contract.startDate) {
+                  <span class="text-base font-medium">{{ contract.startDate | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground">-</span>
+                }
+              </div>
+
+              <!-- Renewal date -->
+              <div class="relative flex flex-col items-center gap-1 pt-7 text-center">
+                <span class="absolute top-0 left-1/2 -translate-x-1/2 size-4 rounded-full border-2" [class]="isPast(contract.renewalDate) ? 'bg-foreground border-foreground' : 'bg-card border-muted-foreground'"></span>
+                <span hlmLabel>Rinnovo</span>
+                @if (contract.renewalDate) {
+                  <span class="text-base font-medium">{{ contract.renewalDate | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground">-</span>
+                }
+              </div>
+
+              <!-- Termination date -->
+              <div class="relative flex flex-col items-end gap-1 pt-7 text-right">
+                <span class="absolute top-0 right-0 size-4 rounded-full border-2" [class]="isPast(contract.terminationDate) ? 'bg-foreground border-foreground' : 'bg-card border-muted-foreground'"></span>
+                <span hlmLabel>{{ contract.status === ContractStatus.Terminated ? 'Cessato il' : 'Cessa il' }}</span>
+                @if (contract.terminationDate) {
+                  <span class="text-base font-medium">{{ contract.terminationDate | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground">-</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seats -->
+        <div hlmTabsContent="seats" class="flex flex-col gap-6 animate-rk-rise">
+          <h2 hlmCardTitle class="text-lg font-semibold">Variazioni delle postazioni</h2>
+          @if (seatEvents().length > 0) {
+            <div hlmTableContainer>
+              <table hlmTable>
+                <thead hlmTHead>
+                  <tr hlmTr class="bg-background hover:bg-background">
+                    <th hlmTh>Data</th>
+                    <th hlmTh>Variazione</th>
+                    <th hlmTh class="text-right">Utenti attivi</th>
+                    <th hlmTh class="text-right">Postazioni</th>
+                  </tr>
+                </thead>
+                <tbody hlmTBody>
+                  @for (event of seatEvents(); track $index) {
+                    <tr hlmTr>
+                      <td hlmTd>{{ event.at | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td hlmTd>{{ event.kind === SeatEventKind.SeatsAdded ? 'Postazioni aggiunte' : 'Utente cancellato' }}</td>
+                      <td hlmTd class="text-right">{{ event.users }}</td>
+                      <td hlmTd class="text-right">{{ event.seats }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <span class="text-sm text-muted-foreground">Nessuna variazione</span>
+          }
+        </div>
+
+        <!-- Payment: direct contracts in force, with a subscription or a checkout to complete -->
+        <div hlmTabsContent="payment" class="flex flex-col gap-6 animate-rk-rise">
+          <h2 hlmCardTitle class="text-lg font-semibold">Pagamento</h2>
+
+          <!-- Access suspended for an unpaid invoice -->
+          @if (contract.accessSuspendedAt) {
+            <div hlmAlert variant="destructive" class="bg-destructive-tint border-transparent">
+              <ng-icon name="lucideLock" />
+              <h4 hlmAlertTitle>Accessi sospesi dal {{ contract.accessSuspendedAt | date:'dd/MM/yyyy' }}</h4>
+            </div>
+          }
+
+          <div class="w-full grid grid-cols-4 gap-4">
+            <!-- Payment status -->
+            <div hlmCard class="flex flex-col gap-2 p-4">
+              <span hlmLabel>Stato</span>
+              <div>
+                <span hlmBadge variant="outline" [class]="paymentStatusClass()">{{ awaitsPayment() ? 'In attesa del pagamento' : contract.financed ? 'Finanziato' : 'Addebito attivo' }}</span>
+              </div>
+            </div>
+
+            <!-- Paid until -->
+            <div hlmCard class="flex flex-col gap-2 p-4">
+              <span hlmLabel>Pagato fino al</span>
+              @if (paidUntil()) {
+                <span class="text-xl font-bold">{{ paidUntil() | date:'dd/MM/yyyy' }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground">-</span>
+              }
+            </div>
+
+            <!-- Next billing -->
+            <div hlmCard class="flex flex-col gap-2 p-4">
+              <span hlmLabel>Prossimo addebito</span>
+              @if (nextCharge()) {
+                <span class="text-xl font-bold">{{ nextCharge() | date:'dd/MM/yyyy' }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground">-</span>
+              }
+            </div>
+
+            <!-- Dunning -->
+            <div hlmCard class="flex flex-col gap-2 p-4">
+              <span hlmLabel>Sollecito</span>
+              <span class="text-xl font-bold">{{ contract.paymentDunningStep | dunningStep }}</span>
+            </div>
+          </div>
+
+          @if (awaitsPayment() && canCollectMandate()) {
+            <div class="flex items-center gap-2">
+              @if (checkoutUrl()) {
+                <button hlmBtn variant="outline" type="button" (click)="copyCheckoutLink()">
+                  <ng-icon name="lucideCopy" size="16" />
+                  Copia link pagamento
+                </button>
+                <button hlmBtn variant="outline" type="button" (click)="openCheckoutLink()">
+                  <ng-icon name="lucideExternalLink" size="16" />
+                  Compila in autonomia
+                </button>
+              } @else {
+                <button hlmBtn variant="outline" type="button" (click)="generateCheckout()">
+                  <ng-icon name="lucideLink" size="16" />
+                  {{ contract.checkoutSessionUrl ? 'Rigenera link pagamento' : 'Genera link pagamento' }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </hlm-tabs>
+  }
+
+  <!-- Action confirmation dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap above the footer -->
+  <hlm-dialog #actionDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      <hlm-dialog-header>
+        @switch (currentAction()) {
+          @case ('terminate') {
+            <h3 hlmDialogTitle>Registrare la disdetta?</h3>
+            <p hlmDialogDescription>Il contratto resta attivo e fatturato fino al rinnovo, poi cessa. Dentro il preavviso il rinnovo imminente avviene comunque e il contratto cessa a quello successivo.</p>
+          }
+          @case ('withdraw') {
+            <h3 hlmDialogTitle>Ritirare la disdetta?</h3>
+            <p hlmDialogDescription>Il contratto torna <strong>Attivo</strong> e si rinnova alla scadenza.</p>
+          }
+          @case ('terminateNow') {
+            <h3 hlmDialogTitle>Cessare il contratto ora?</h3>
+            <p hlmDialogDescription>Il contratto si chiude subito, l'addebito si ferma e il tenant perde l'accesso. Le fatture già emesse restano dovute. Questa azione <strong>non può essere annullata.</strong></p>
+          }
+          @case ('suspend') {
+            <h3 hlmDialogTitle>Sospendere gli accessi?</h3>
+            <p hlmDialogDescription>Gli utenti dell'azienda non entrano più nel prodotto; il contratto resta in vigore e i dati restano. Azienda e contabilità ricevono l'avviso.</p>
+          }
+          @case ('restore') {
+            <h3 hlmDialogTitle>Riattivare gli accessi?</h3>
+            <p hlmDialogDescription>Gli utenti dell'azienda tornano attivi prima dell'incasso, per esempio per un pagamento concordato. I solleciti delle fatture ancora insolute di questo contratto si fermano.</p>
+          }
+          @case ('postpone') {
+            <h3 hlmDialogTitle>Rimandare la sospensione</h3>
+            <p hlmDialogDescription>Se una fattura resta insoluta oltre il quindicesimo giorno, gli accessi restano attivi fino alla data scelta.</p>
+          }
+        }
+      </hlm-dialog-header>
+      @if (currentAction() === 'postpone') {
+        <!-- Postpone date -->
+        <div class="flex flex-col gap-2">
+          <label hlmLabel for="postponeUntil">Sospendi non prima del*</label>
+          <hlm-date-picker buttonId="postponeUntil" [formControl]="postponeControl" class="w-full" [min]="minPostponeDate" [formatDate]="formatDate">
+            <span>Seleziona data</span>
+          </hlm-date-picker>
+        </div>
+      }
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="closeActionDialog()">Annulla</button>
+        <button
+          hlmBtn
+          [variant]="currentAction() === 'terminateNow' ? 'destructive' : 'default'"
+          (click)="confirmAction()"
+          [disabled]="currentAction() === 'postpone' && (!postponeControl.value || postponeControl.value < minPostponeDate)"
+        >
+          Conferma
+        </button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

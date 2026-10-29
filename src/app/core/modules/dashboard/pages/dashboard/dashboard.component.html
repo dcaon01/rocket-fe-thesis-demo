@@ -1,0 +1,28 @@
+<div class="w-full flex flex-col gap-6">
+  <rocket-page-header headerTitle="Dashboard" />
+
+  <!-- Fatturato -->
+  @if (canViewRevenue()) {
+    <rocket-revenue-section />
+  }
+
+  <!-- Clienti -->
+  @if (canViewCustomerBase()) {
+    <rocket-customer-base-section />
+  }
+
+  <!-- Utenze -->
+  @if (canViewUsage()) {
+    <rocket-usage-section />
+  }
+
+  <!-- Canali -->
+  @if (canViewChannels()) {
+    <rocket-channel-split-section />
+  }
+
+  <!-- Rete dei rivenditori -->
+  @if (canViewNetworkMap()) {
+    <rocket-network-map-section />
+  }
+</div>

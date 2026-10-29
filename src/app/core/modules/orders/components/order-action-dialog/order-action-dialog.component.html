@@ -1,0 +1,115 @@
+<!-- Action dialog -->
+<!-- hidden: the dialog opens in an overlay, its host would only add a gap above the footer -->
+<hlm-dialog #dialog class="hidden">
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ pendingAction()?.title }}</h3>
+      <p hlmDialogDescription>{{ pendingAction()?.description }}</p>
+    </hlm-dialog-header>
+
+    <form [formGroup]="actionForm" class="flex flex-col gap-4">
+      @switch (pendingAction()?.kind) {
+        @case ('discountCustomization') {
+          <!-- Discount -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="discountPercent">Sconto %*</label>
+            <input type="number" id="discountPercent" hlmInput formControlName="discountPercent" step="1" min="0" [max]="maxCustomizationDiscount()" autocomplete="off" />
+          </div>
+        }
+        @case ('refuseApproval') {
+          <!-- Approval refusal reason -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="approvalRefusalReason">Motivo del rifiuto*</label>
+            <textarea hlmTextarea id="approvalRefusalReason" formControlName="approvalRefusalReason" placeholder="Cosa deve cambiare nell'offerta" class="w-full"></textarea>
+          </div>
+        }
+        @case ('refuse') {
+          <!-- Refusal reason -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="refusalReason">Causale*</label>
+            <brn-select id="refusalReason" placeholder="Seleziona una causale" formControlName="refusalReason" class="w-full">
+              <hlm-select-trigger class="w-full">
+                <hlm-select-value />
+              </hlm-select-trigger>
+              <hlm-select-content>
+                @for (reason of refusalReasons; track reason) {
+                  <hlm-option [value]="reason">{{ reason | orderRefusalReason }}</hlm-option>
+                }
+              </hlm-select-content>
+            </brn-select>
+          </div>
+
+          <!-- Refusal note -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="refusalNote">Nota{{ actionForm.getRawValue().refusalReason === 'OTHER' ? '*' : '' }}</label>
+            <textarea hlmTextarea id="refusalNote" formControlName="refusalNote" placeholder="Nota sul rifiuto" class="w-full"></textarea>
+          </div>
+        }
+        @case ('financing') {
+          <!-- Financier -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="financier">Finanziaria*</label>
+            <brn-select id="financier" placeholder="Seleziona una finanziaria" formControlName="financier" class="w-full">
+              <hlm-select-trigger class="w-full">
+                <hlm-select-value />
+              </hlm-select-trigger>
+              <hlm-select-content>
+                @for (financier of financiers; track financier) {
+                  <hlm-option [value]="financier">{{ financier === 'NONE' ? 'Nessuna' : 'Grenke' }}</hlm-option>
+                }
+              </hlm-select-content>
+            </brn-select>
+          </div>
+
+          @if (actionForm.getRawValue().financier !== 'NONE') {
+            <!-- Financier reference -->
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="financierReference">Riferimento della pratica*</label>
+              <input type="text" id="financierReference" placeholder="Riferimento della pratica" hlmInput formControlName="financierReference" autocomplete="off" />
+            </div>
+
+            <!-- Financed years -->
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="financedYears">Anni finanziati</label>
+              <input type="number" id="financedYears" placeholder="Durata dell'ordine coperta dalla finanziaria" hlmInput formControlName="financedYears" min="1" step="1" autocomplete="off" />
+            </div>
+          }
+        }
+        @case ('confirm') {
+          <!-- Delivery date -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="deliveryDate">Data prevista di consegna*</label>
+            <hlm-date-picker buttonId="deliveryDate" formControlName="deliveryDate" class="w-full" [formatDate]="formatDate">
+              <span>Seleziona data</span>
+            </hlm-date-picker>
+          </div>
+        }
+      }
+
+      <!-- PDF of the action: the signed offer, or the contract of the finance company -->
+      @if (pendingAction()?.kind === 'accept' || (pendingAction()?.kind === 'financing' && actionForm.getRawValue().financier !== 'NONE')) {
+        <div class="flex flex-col gap-2">
+          <label hlmLabel>{{ pendingAction()?.kind === 'accept' ? 'Offerta firmata*' : 'Contratto della finanziaria' }}</label>
+          <rocket-file-drop
+            accept="application/pdf"
+            [hint]="pendingAction()?.kind === 'financing' && order()?.financingContractS3Key ? 'PDF. Ne è già caricato uno: un nuovo file lo sostituisce.' : 'PDF.'"
+            [fileName]="actionFile()?.name ?? null"
+            [disabled]="isLoading()"
+            (fileSelected)="onActionFileSelected($event)"
+            (cleared)="actionFile.set(null)"
+          />
+          @if (actionFileError(); as error) {
+            <p class="text-destructive text-sm">{{ error }}</p>
+          }
+        </div>
+      }
+    </form>
+
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" (click)="close()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn [variant]="pendingAction()?.destructive ? 'destructive' : 'default'" (click)="confirm()" [disabled]="isLoading() || !isActionValid()">
+        {{ isLoading() ? 'Caricamento...' : pendingAction()?.confirmLabel }}
+      </button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

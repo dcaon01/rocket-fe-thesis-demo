@@ -1,0 +1,171 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Ordini" [description]="description()">
+    <button hlmBtn variant="outline" size="sm" hlmTooltip="Aggiorna" aria-label="Aggiorna" (click)="loadOrders()">
+      <ng-icon hlm name="lucideRefreshCw" size="16" />
+    </button>
+    @if (canCreate()) {
+      <button hlmBtn size="sm" (click)="goToCreateOrder()">
+        Nuovo ordine
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="ordersFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Search -->
+      <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+        <label hlmLabel for="search">Cerca</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input type="text" id="search" placeholder="Codice, ragione sociale o partita IVA" hlmInputGroupInput formControlName="search" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="status">Stato ordine</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+      </div>
+
+      <!-- Line status -->
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="lineStatus">Stato riga</label>
+        <rocket-multi-select-filter buttonId="lineStatus" formControlName="lineStatus" [options]="lineStatusOptions" />
+      </div>
+
+      <!-- Channel -->
+      @if (!isResellerWorkspace()) {
+        <div class="flex flex-col gap-2 min-w-44">
+          <label hlmLabel for="channel">Canale</label>
+          <rocket-multi-select-filter buttonId="channel" formControlName="channel" [options]="channelOptions" />
+        </div>
+      }
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-64">
+        <label hlmLabel for="period">Richiesti</label>
+        <rocket-date-range-filter buttonId="period" formControlName="period" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Codice</th>
+            <th hlmTh>Azienda</th>
+            @if (!isReseller()) {
+              <th hlmTh>Canale</th>
+            }
+            <th hlmTh>Stato</th>
+            <th hlmTh>Avanzamento</th>
+            <th hlmTh>Richiesto il</th>
+            <th hlmTh>Consegna prevista</th>
+            @if (canViewOwnership()) {
+              <th hlmTh>Gestito da</th>
+            }
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (order of pager.items(); track order.id) {
+              <tr hlmTr>
+                <td hlmTd class="font-medium">{{ order.code }}</td>
+                <td hlmTd>
+                  <div class="flex flex-col">
+                    <span>{{ order.companyName }}</span>
+                    @if (order.companyVatNumber) {
+                      <span class="text-xs text-muted-foreground">{{ order.companyVatNumber }}</span>
+                    }
+                  </div>
+                </td>
+                @if (!isReseller()) {
+                  <td hlmTd>{{ order.channel | salesChannel }}</td>
+                }
+                <td hlmTd>
+                  <div class="flex items-center gap-2">
+                    <span hlmBadge variant="outline" rocketOrderStatus [status]="order.status">{{ order.status | orderStatus }}</span>
+                    @if (order.hasCustomization) {
+                      <span class="flex" hlmTooltip="Richiesta di personalizzazione.">
+                        <ng-icon name="lucidePuzzle" size="14" class="text-muted-foreground" />
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td hlmTd>
+                  @if (order.status === OrderStatus.Confirmed || order.status === OrderStatus.Closed) {
+                    {{ order.linesProvisioned }}/{{ order.linesTotal }} erogate
+                  } @else {
+                    <span class="text-muted-foreground">-</span>
+                  }
+                </td>
+                <td hlmTd>{{ order.requestedAt | date:'dd/MM/yyyy' }}</td>
+                <td hlmTd>{{ order.deliveryDate ? (order.deliveryDate | date:'dd/MM/yyyy') : '-' }}</td>
+                @if (canViewOwnership()) {
+                  <td hlmTd><span hlmBadge variant="outline">{{ (order.resellerPath | resellerOwner) ?? 'Keus' }}</span></td>
+                }
+                <td hlmTd class="text-right flex justify-end items-center gap-1">
+                  @if (canDelete(order)) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina ordine" aria-label="Elimina ordine" (click)="openDeleteDialog(order)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  }
+                  <!-- Forward steps of the order; cancellations and refusals stay in the order page -->
+                  @for (step of stepsOf(order); track step) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="orderSteps[step].label" [attr.aria-label]="orderSteps[step].label" (click)="openStep(step, order)"><ng-icon [name]="orderSteps[step].icon" size="16" /></button>
+                  }
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Apri ordine" aria-label="Apri ordine" (click)="goToOrder(order.id)"><ng-icon name="lucideEye" size="16" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun ordine trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+
+  <!-- Action dialog, shared with the order page -->
+  <rocket-order-action-dialog #actionDialog (done)="loadOrders()" />
+
+  <!-- Delete dialog -->
+  <hlm-dialog #deleteDialog>
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>Eliminare l'ordine?</h3>
+        <p hlmDialogDescription>
+          L'ordine <strong>{{ selectedOrder()?.code }}</strong> viene eliminato con le sue righe, la personalizzazione e i suoi documenti.<br>
+          Questa azione <strong>non può essere annullata.</strong>
+        </p>
+      </hlm-dialog-header>
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="closeDeleteDialog()" [disabled]="isLoading()">Annulla</button>
+        <button hlmBtn variant="destructive" (click)="deleteOrder()" [disabled]="isLoading()">{{ isLoading() ? 'Caricamento...' : 'Elimina' }}</button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

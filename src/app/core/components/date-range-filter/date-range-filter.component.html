@@ -1,0 +1,27 @@
+<hlm-popover sideOffset="5" [state]="popoverState()" (stateChanged)="popoverState.set($event)">
+  <button hlmBtn variant="outline" type="button" [attr.id]="buttonId()" [disabled]="disabled()" hlmPopoverTrigger class="w-full justify-between font-normal">
+    <span class="flex items-center gap-2 truncate">
+      <ng-icon hlm name="lucideCalendar" size="sm" class="opacity-60" />
+      {{ summary() }}
+    </span>
+    <ng-icon hlm name="lucideChevronDown" size="sm" class="opacity-60" />
+  </button>
+
+  <hlm-popover-content class="w-fit p-3 flex flex-col gap-3" *hlmPopoverPortal="let ctx">
+    <!-- Bound -->
+    <hlm-toggle-group type="single" variant="outline" size="sm" [value]="mode()" (valueChange)="setMode($event)" class="w-full">
+      <button hlmToggleGroupItem value="from" class="flex-1">Dal</button>
+      <button hlmToggleGroupItem value="to" class="flex-1">Al</button>
+    </hlm-toggle-group>
+
+    <!-- Calendar -->
+    @if (mode() === 'from') {
+      <hlm-calendar calendarClass="border-0 p-0" [date]="value().from ?? undefined" [max]="value().to ?? undefined" (dateChange)="pickFrom($event)" />
+    } @else {
+      <hlm-calendar calendarClass="border-0 p-0" [date]="value().to ?? undefined" [min]="value().from ?? undefined" (dateChange)="pickTo($event)" />
+    }
+
+    <!-- Clear -->
+    <button hlmBtn variant="ghost" size="sm" type="button" (click)="clear()">Cancella</button>
+  </hlm-popover-content>
+</hlm-popover>

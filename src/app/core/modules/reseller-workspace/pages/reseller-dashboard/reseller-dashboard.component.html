@@ -1,0 +1,27 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Dashboard" />
+
+  @if (resellerId(); as resellerId) {
+    <!-- Revenue -->
+    @if (canViewRevenue()) {
+      <rocket-reseller-revenue-section [resellerId]="resellerId" />
+    }
+
+    <!-- Licenses, customers and worklist -->
+    @if (canViewOverview()) {
+      <rocket-reseller-overview-section [resellerId]="resellerId" />
+      <rocket-reseller-worklist-section [resellerId]="resellerId" />
+    }
+
+    <!-- Usage -->
+    @if (canViewUsage()) {
+      <rocket-usage-section [resellerId]="resellerId" />
+    }
+
+    <!-- Economic position -->
+    @if (canViewBilling()) {
+      <rocket-reseller-billing-section [resellerId]="resellerId" />
+    }
+  }
+</div>

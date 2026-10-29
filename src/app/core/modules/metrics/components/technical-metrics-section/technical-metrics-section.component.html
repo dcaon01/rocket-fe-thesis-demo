@@ -1,0 +1,201 @@
+<div class="flex flex-col gap-6">
+  <!-- Errors -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Errori</h2>
+
+    @if (hasErrors()) {
+      <div class="grid grid-cols-4 gap-6">
+        @for (card of errorsCards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            <p class="text-2xl font-bold">{{ !integrationsEnabled && card.name === 'Alert aperti' ? '-' : errorsDisplayValues[i] }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <h3 class="chart-title">Errori per periodo</h3>
+          <div class="chart-container">
+            @if (errorsLineOption) {
+              <div echarts [options]="errorsLineOption" class="w-full h-full"></div>
+            }
+          </div>
+        </div>
+
+        @if (!productId()) {
+          <div hlmCard class="chart-card pie-chart-card">
+            <h3 class="chart-title">Alert aperti per prodotto</h3>
+            <div class="chart-container">
+              <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+              @if (integrationsEnabled) {
+                @if (openAlertsPieOption) {
+                  <div echarts [options]="openAlertsPieOption" class="w-full h-full"></div>
+                }
+              } @else {
+                <rocket-unavailable-data source="Sentry" />
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Issues -->
+      <div class="flex flex-col gap-3">
+        <h3 class="text-lg font-semibold tracking-tight text-foreground">Problemi del mese</h3>
+        <div hlmTableContainer>
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr class="bg-background hover:bg-background">
+                <th hlmTh>Problema</th>
+                @if (!productId()) {
+                  <th hlmTh>Prodotto</th>
+                }
+                <th hlmTh>Livello</th>
+                <th hlmTh>Errori</th>
+                <th hlmTh>Ultimo errore</th>
+                <th hlmTh></th>
+              </tr>
+            </thead>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (!integrationsEnabled) {
+              <caption hlmCaption>
+                <rocket-unavailable-data source="Sentry" />
+              </caption>
+            } @else if (issues().length > 0) {
+              <tbody hlmTBody>
+                @for (issue of issues(); track issue.url) {
+                  <tr hlmTr>
+                    <td hlmTd class="max-w-md truncate" [title]="issue.title">{{ issue.title }}</td>
+                    @if (!productId()) {
+                      <td hlmTd>{{ productNames().get(issue.productId) ?? issue.productId }}</td>
+                    }
+                    <td hlmTd>
+                      <span hlmBadge variant="outline" rocketSentryIssueLevel [level]="issue.level">{{ issue.level | sentryIssueLevel }}</span>
+                    </td>
+                    <td hlmTd>{{ issue.events }}</td>
+                    <td hlmTd>{{ issue.lastSeen | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td hlmTd>
+                      <a hlmBtn variant="link" class="px-0!" [href]="issue.url" target="_blank" rel="noopener">Apri su Sentry</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            } @else if (issuesFailed()) {
+              <caption hlmCaption>
+                <hlm-empty>
+                  <hlm-empty-header>
+                    <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideTriangleAlert" size="20" /></div>
+                    <p hlmEmptyDescription>Non è stato possibile leggere i problemi da Sentry.</p>
+                  </hlm-empty-header>
+                </hlm-empty>
+              </caption>
+            } @else if (!issuesLoading()) {
+              <caption hlmCaption>
+                <hlm-empty>
+                  <hlm-empty-header>
+                    <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                    <p hlmEmptyDescription>Nessun problema nel mese in corso.</p>
+                  </hlm-empty-header>
+                </hlm-empty>
+              </caption>
+            }
+          </table>
+        </div>
+      </div>
+    } @else if (errorsLoading()) {
+      <div class="grid grid-cols-4 gap-6">
+        <rocket-kpi-skeletons [count]="3" />
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <div class="chart-container"><hlm-skeleton class="size-full" /></div>
+        </div>
+        @if (!productId()) {
+          <div hlmCard class="chart-card pie-chart-card">
+            <div class="chart-container"><hlm-skeleton class="size-full" /></div>
+          </div>
+        }
+      </div>
+    } @else if (errorsLoaded()) {
+      <hlm-empty>
+        <hlm-empty-header>
+          <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+          <p hlmEmptyDescription>{{ productId() ? 'Il prodotto non ha un progetto Sentry.' : 'Nessun prodotto ha un progetto Sentry.' }}</p>
+        </hlm-empty-header>
+      </hlm-empty>
+    }
+  </div>
+
+  <!-- Availability -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Disponibilità e tempi di risposta</h2>
+
+    @if (hasAvailability()) {
+      <div class="grid grid-cols-4 gap-6">
+        @for (card of availabilityCards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <p class="text-2xl font-bold">{{ availabilityDisplayValues[i] }}</p>
+            @if (card.note) {
+              <p class="text-sm text-muted-foreground">{{ card.note }}</p>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <h3 class="chart-title">Disponibilità per periodo (%)</h3>
+          <div class="chart-container">
+            @if (availabilityLineOption) {
+              <div echarts [options]="availabilityLineOption" class="w-full h-full"></div>
+            }
+          </div>
+        </div>
+      </div>
+
+      @if (latencyLineOption) {
+        <div class="charts-row">
+          <div hlmCard class="chart-card line-chart-card">
+            <h3 class="chart-title">{{ productId() ? 'Latenza' : 'Latenza al 95° percentile' }}</h3>
+            <div class="chart-container">
+              <div echarts [options]="latencyLineOption" class="w-full h-full"></div>
+            </div>
+          </div>
+        </div>
+      }
+    } @else if (availabilityLoading()) {
+      <div class="grid grid-cols-4 gap-6">
+        <rocket-kpi-skeletons [count]="4" />
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <div class="chart-container"><hlm-skeleton class="size-full" /></div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <div class="chart-container"><hlm-skeleton class="size-full" /></div>
+        </div>
+      </div>
+    } @else if (availabilityLoaded()) {
+      <hlm-empty>
+        <hlm-empty-header>
+          <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+          <p hlmEmptyDescription>{{ productId() ? 'Il prodotto non ha un indirizzo di salute.' : 'Nessun prodotto ha un indirizzo di salute.' }}</p>
+        </hlm-empty-header>
+      </hlm-empty>
+    }
+  </div>
+</div>

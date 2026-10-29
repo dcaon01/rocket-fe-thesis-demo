@@ -1,0 +1,266 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="scheduleFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Search -->
+      <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+        <label hlmLabel for="scheduleSearch">Cerca</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input type="text" id="scheduleSearch" placeholder="Numero, cliente, contratto o voce" hlmInputGroupInput formControlName="search" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Direction -->
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="scheduleDirection">Verso</label>
+        <rocket-multi-select-filter buttonId="scheduleDirection" formControlName="direction" [options]="directionOptions" />
+      </div>
+
+      <!-- State -->
+      @if (isInvoices()) {
+        <div class="flex flex-col gap-2 min-w-44">
+          <label hlmLabel for="scheduleState">Stato</label>
+          <rocket-multi-select-filter buttonId="scheduleState" formControlName="state" [options]="stateOptions" />
+        </div>
+      }
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-56">
+        <label hlmLabel for="schedulePeriod">Scadenza</label>
+        <rocket-date-range-filter buttonId="schedulePeriod" formControlName="period" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+
+      <!-- End of the row, such as the view tabs of the payment schedule -->
+      <ng-content select="[filtersEnd]" />
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Scadenza</th>
+            <th hlmTh>Verso</th>
+            <th hlmTh>Voce</th>
+            <th hlmTh class="text-right">Importo</th>
+            <th hlmTh>Stato</th>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (isInvoices() && integrationsEnabled) {
+              <th hlmTh>Fattura elettronica</th>
+            }
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (entry of pager.items(); track entry.key) {
+              <tr hlmTr>
+                <td hlmTd>
+                  <div class="flex flex-col">
+                    <span>{{ entry.dueDate | date:'dd/MM/yyyy' }}</span>
+                    @switch (dueState(entry)) {
+                      @case ('overdue') {
+                        <span class="text-xs text-destructive">Scaduta</span>
+                      }
+                      @case ('dueSoon') {
+                        <span class="text-xs text-muted-foreground">Entro 7 giorni</span>
+                      }
+                    }
+                  </div>
+                </td>
+                <td hlmTd>
+                  <span hlmBadge variant="outline">{{ entry.direction === toKeus ? 'In uscita' : 'In entrata' }}</span>
+                </td>
+                <td hlmTd class="max-w-96">
+                  @if (entry.invoice; as invoice) {
+                    <div class="flex flex-col">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium">Fattura di Keus</span>
+                        @if (invoice.prorationId) {
+                          <span hlmBadge variant="outline">Rateo</span>
+                        }
+                      </div>
+                      <span class="text-xs text-muted-foreground">
+                        {{ invoice.number ? 'n. ' + invoice.number + ' · ' : '' }}registrata il {{ invoice.issuedAt | date:'dd/MM/yyyy' }}
+                      </span>
+                    </div>
+                  } @else if (entry.expected; as expected) {
+                    <div class="flex flex-col">
+                      @if (entry.direction === toKeus) {
+                        <span class="font-medium">Fattura di Keus</span>
+                        <span class="text-sm line-clamp-2">{{ expected.description }}</span>
+                      } @else {
+                        <span class="font-medium">{{ expected.companyName }}</span>
+                        <span class="text-sm line-clamp-2">{{ expected.description }}</span>
+                      }
+                      @if (expected.contractId) {
+                        <span class="text-xs text-muted-foreground">Contratto {{ expected.contractCode }}</span>
+                      }
+                    </div>
+                  } @else if (entry.charge; as charge) {
+                    <div class="flex flex-col">
+                      <span class="font-medium">{{ charge.companyName }}</span>
+                      <!-- On the invoices only two lines, as the invoices of Keus have -->
+                      @if (!isInvoices()) {
+                        <span class="text-sm line-clamp-2">{{ charge.description }}</span>
+                      }
+                      <span class="text-xs text-muted-foreground">
+                        @if (charge.kind === contractShare) {
+                          Contratto {{ charge.contractCode }}
+                        } @else if (charge.kind === recurring) {
+                          Ricorrente, {{ charge.cadence | chargeCadence | lowercase }}
+                        } @else {
+                          Una tantum
+                        }
+                      </span>
+                    </div>
+                  }
+                </td>
+                <td hlmTd class="text-right">
+                  @if (entry.invoice; as invoice) {
+                    <div class="flex flex-col">
+                      <span>{{ invoice.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                      <span class="text-xs text-muted-foreground">IVA inclusa</span>
+                    </div>
+                  } @else if (entry.expected; as expected) {
+                    @if (entry.direction === toKeus) {
+                      <div class="flex flex-col">
+                        <span>{{ expected.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                        <span class="text-xs text-muted-foreground">IVA inclusa</span>
+                      </div>
+                    } @else if (expected.customerCents !== undefined) {
+                      <div class="flex flex-col">
+                        <span>{{ expected.customerCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                        <span class="text-xs text-muted-foreground">IVA esclusa</span>
+                      </div>
+                    } @else {
+                      <span class="text-muted-foreground">-</span>
+                    }
+                  } @else if (entry.charge; as charge) {
+                    <div class="flex flex-col">
+                      <span>{{ charge.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                      <span class="text-xs text-muted-foreground">IVA esclusa</span>
+                    </div>
+                  }
+                </td>
+                <td hlmTd>
+                  @if (entry.invoice; as invoice) {
+                    <span hlmBadge variant="outline" rocketInvoiceStatus [status]="invoice.status">{{ invoice.status | invoiceStatus:true }}</span>
+                  } @else if (entry.expected) {
+                    <span hlmBadge variant="outline" rocketInvoiceStatus [status]="expectedStatus">{{ expectedStatus | invoiceStatus }}</span>
+                  } @else {
+                    <span hlmBadge variant="outline" rocketInvoiceStatus [status]="entry.collected ? paid : open">{{ entry.collected ? 'Incassata' : 'Da incassare' }}</span>
+                  }
+                </td>
+                <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+                @if (isInvoices() && integrationsEnabled) {
+                  <td hlmTd>
+                    @if (entry.invoice?.documentStatus; as documentStatus) {
+                      <span hlmBadge variant="outline" rocketElectronicInvoice [status]="documentStatus">{{ documentStatus | electronicInvoice }}</span>
+                    } @else {
+                      <span class="text-muted-foreground">-</span>
+                    }
+                  </td>
+                }
+                <td hlmTd class="text-right">
+                  @if (entry.invoice; as invoice) {
+                    @if (invoice.proFormaS3Key) {
+                      <button class="hover:bg-foreground/5" hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="invoiceMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+                        <ng-icon name="lucideEllipsisVertical" size="16" />
+                      </button>
+                      <ng-template #invoiceMenu>
+                        <hlm-dropdown-menu>
+                          <button hlmDropdownMenuItem (click)="downloadProForma(invoice)">
+                            <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+                            <span>Scarica la pro forma</span>
+                          </button>
+                        </hlm-dropdown-menu>
+                      </ng-template>
+                    }
+                  } @else if (chargeRoute(entry); as route) {
+                    <button position="left" class="hover:bg-foreground/5" hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="entryMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+                      <ng-icon name="lucideEllipsisVertical" size="16" />
+                    </button>
+                    <ng-template #entryMenu>
+                      <hlm-dropdown-menu>
+                        <a hlmDropdownMenuItem [routerLink]="route">
+                          <ng-icon name="lucidePencil" class="mr-2 h-4 w-4" />
+                          <span>{{ canManage() && isManual(entry) ? 'Modifica la voce' : 'Apri la voce' }}</span>
+                        </a>
+                        @if (canManage()) {
+                          <button hlmDropdownMenuItem (click)="collectedDialog.open(entry)">
+                            @if (entry.collected) {
+                              <ng-icon name="lucideUndo2" class="mr-2 h-4 w-4" />
+                              <span>Segna da incassare</span>
+                            } @else {
+                              <ng-icon name="lucideCircleCheck" class="mr-2 h-4 w-4" />
+                              <span>Segna incassata</span>
+                            }
+                          </button>
+                        }
+                        @if (canManage() && isManual(entry)) {
+                          <button hlmDropdownMenuItem (click)="openDeleteDialog(entry)">
+                            <ng-icon name="lucideTrash2" class="mr-2 h-4 w-4 text-destructive" />
+                            <span class="text-destructive">Elimina la voce</span>
+                          </button>
+                        }
+                      </hlm-dropdown-menu>
+                    </ng-template>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>{{ isInvoices() ? 'Nessuna fattura trovata.' : 'Nessuna scadenza trovata.' }}</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+
+  <!-- Delete dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap -->
+  <hlm-dialog #deleteDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      @if (pendingDelete()?.charge; as charge) {
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>Eliminare la voce?</h3>
+          <p hlmDialogDescription>
+            La voce <strong>{{ charge.description }}</strong> di {{ charge.companyName }} esce dallo scadenziario con tutte le sue scadenze, anche quelle già incassate.
+            Questa azione <strong>non può essere annullata.</strong>
+          </p>
+        </hlm-dialog-header>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" (click)="closeDeleteDialog()" [disabled]="isDeleting()">Annulla</button>
+          <button hlmBtn variant="destructive" (click)="deleteCharge()" [disabled]="isDeleting()">
+            {{ isDeleting() ? 'Caricamento...' : 'Elimina' }}
+          </button>
+        </hlm-dialog-footer>
+      }
+    </hlm-dialog-content>
+  </hlm-dialog>
+
+  <!-- Confirmation of a due date collected or not -->
+  <rocket-collected-dialog #collectedDialog (changed)="pager.reload()" />
+</div>

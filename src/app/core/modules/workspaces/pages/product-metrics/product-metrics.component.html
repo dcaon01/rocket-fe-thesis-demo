@@ -1,0 +1,108 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <rocket-page-header headerTitle="Metriche prodotto" description="Analizza l'utilizzo del prodotto.">
+      @if (mixpanelUrl(); as url) {
+        <a headerMeta hlmBtn variant="outline" size="sm" [href]="url" target="_blank" rel="noopener">
+          <ng-icon name="lucideExternalLink" size="16" />
+          Apri su Mixpanel
+        </a>
+      }
+    </rocket-page-header>
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onPeriodChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  <!-- Adoption -->
+  <rocket-product-adoption-section [productId]="productId" [period]="period()" />
+
+  <!-- Companies -->
+  <div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-1">
+      <h2 class="text-xl font-semibold tracking-tight text-foreground">Aziende</h2>
+    </div>
+
+    <!-- Filters -->
+    <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Search -->
+      <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+        <label hlmLabel for="search">Nome</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input hlmInputGroupInput type="text" id="search" placeholder="Cerca azienda per nome" formControlName="search" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-64">
+        <label hlmLabel for="period">Periodo</label>
+        <rocket-date-range-filter buttonId="period" formControlName="period" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+
+    <!-- Table -->
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Azienda</th>
+            @for (lever of levers; track lever) {
+              <th hlmTh class="text-center">{{ lever | mixpanelLever }}</th>
+            }
+          </tr>
+        </thead>
+        @if (rows().length > 0) {
+          <tbody hlmTBody>
+            @for (row of rows(); track row.tenant.id) {
+              <!-- Same height for every row, with or without the line under the badge -->
+              <tr hlmTr class="h-16">
+                <td hlmTd class="font-medium">{{ row.tenant.name }}</td>
+                @for (lever of levers; track lever) {
+                  <td hlmTd class="text-center">
+                    @if (row.results.get(lever); as result) {
+                      <div class="flex flex-col items-center gap-1">
+                        <span hlmBadge variant="outline" rocketLeverOutcome [outcome]="result.outcome">{{ result.outcome | leverOutcome }}</span>
+                        @for (line of cellLines(result); track $index) {
+                          <span class="text-xs text-muted-foreground">{{ line.label ? line.label + ': ' : '' }}{{ line.text }}</span>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-sm text-muted-foreground">-</span>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessuna azienda per questo prodotto.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <rocket-table-pagination [pager]="pager" />
+  </div>
+</div>

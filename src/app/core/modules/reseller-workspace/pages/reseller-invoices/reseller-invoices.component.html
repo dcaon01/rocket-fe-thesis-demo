@@ -1,0 +1,11 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Fatture" [description]="isReseller() ? 'Consulta le fatture di Keus pagate o già scadute e le scadenze incassate dei tuoi clienti.' : 'Consulta le fatture di Keus al rivenditore, pagate o già scadute, e le scadenze incassate dei suoi clienti.'">
+    <button hlmBtn variant="outline" size="sm" hlmTooltip="Aggiorna" aria-label="Aggiorna" (click)="list.loadSchedule()">
+      <ng-icon name="lucideRefreshCw" size="16" />
+    </button>
+  </rocket-page-header>
+
+  <!-- Invoices -->
+  <rocket-reseller-schedule-list #list mode="invoices" />
+</div>

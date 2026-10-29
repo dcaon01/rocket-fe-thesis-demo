@@ -1,0 +1,13 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Nuova voce" description="Aggiungi una voce da fatturare a un cliente, una volta o a cadenza.">
+    <rocket-form-toolbar [steps]="form.steps">
+      <span class="inline-flex" [hlmTooltip]="form.chargeForm.invalid ? 'Completa i campi obbligatori' : !form.steps.allVisited() ? 'Apri prima tutte le sezioni' : ''">
+        <button hlmBtn [disabled]="form.chargeForm.invalid || !form.steps.allVisited()" (click)="createCharge()">Conferma</button>
+      </span>
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <!-- Item form -->
+  <rocket-customer-charge-form class="flex-1 min-h-0 flex flex-col" #form [creating]="true" />
+</div>

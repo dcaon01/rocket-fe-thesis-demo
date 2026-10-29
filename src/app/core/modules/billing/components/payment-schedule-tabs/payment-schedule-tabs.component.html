@@ -1,0 +1,33 @@
+<hlm-tabs [tab]="activeView()" (tabActivated)="onTabActivated($event)" class="w-full gap-6">
+  <!-- View switch, at the end of the filters of each view -->
+  <ng-template #viewTabs>
+    <hlm-tabs-list>
+      <button hlmTabsTrigger="calendario">Calendario</button>
+      <button hlmTabsTrigger="lista">Lista</button>
+    </hlm-tabs-list>
+  </ng-template>
+
+  <!-- Calendar -->
+  <div hlmTabsContent="calendario">
+    <ng-template hlmTabsContentLazy>
+      <rocket-invoice-calendar [mode]="mode()">
+        <div filtersEnd class="ml-auto self-end"><ng-container *ngTemplateOutlet="viewTabs" /></div>
+      </rocket-invoice-calendar>
+    </ng-template>
+  </div>
+
+  <!-- List -->
+  <div hlmTabsContent="lista">
+    <ng-template hlmTabsContentLazy>
+      @if (mode() === 'resellerSchedule') {
+        <rocket-reseller-schedule-list>
+          <div filtersEnd class="ml-auto self-end"><ng-container *ngTemplateOutlet="viewTabs" /></div>
+        </rocket-reseller-schedule-list>
+      } @else {
+        <rocket-invoice-list mode="schedule">
+          <div filtersEnd class="ml-auto self-end"><ng-container *ngTemplateOutlet="viewTabs" /></div>
+        </rocket-invoice-list>
+      }
+    </ng-template>
+  </div>
+</hlm-tabs>

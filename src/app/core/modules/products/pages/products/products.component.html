@@ -1,0 +1,125 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Gestione prodotti" [description]="canManage() ? 'Gestisci i prodotti, con integrazioni e strutture.' : 'Consulta i prodotti e apri il loro workspace.'">
+    @if (canManage()) {
+      <button
+        hlmBtn
+        size="sm"
+        (click)="goToCreateProduct()"
+      >
+        Crea prodotto
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Products table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh class="w-16"></th>
+            <th hlmTh>Nome</th>
+            <th hlmTh>Descrizione</th>
+            <th hlmTh>Vendita</th>
+            <th hlmTh>Stato</th>
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (product of pager.items(); track product.id) {
+              <tr hlmTr>
+                <td hlmTd>
+                  <hlm-avatar>
+                    @if (getLogoUrl(product.logoS3Key)) {
+                      <img [src]="getLogoUrl(product.logoS3Key)" [alt]="product.name" hlmAvatarImage />
+                    }
+                    <span class="text-white bg-primary text-xs" hlmAvatarFallback>{{ getInitials(product.prefix) }}</span>
+                  </hlm-avatar>
+                </td>
+                <td hlmTd>{{ product.name }}</td>
+                <td hlmTd>{{ product.description || '-' }}</td>
+                <td hlmTd>
+                  @if (product.orderable !== false || product.resellerPlansEnabled) {
+                    <div class="flex flex-wrap gap-1">
+                      @if (product.orderable !== false) {
+                        <span hlmBadge variant="outline">Diretta</span>
+                      }
+                      @if (product.resellerPlansEnabled) {
+                        <span hlmBadge variant="outline">Rivenditori</span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="text-muted-foreground">Nessuna</span>
+                  }
+                </td>
+                <td hlmTd><span hlmBadge variant="outline" rocketProductStatus [status]="product.status">{{ product.status | productStatus }}</span></td>
+                <td hlmTd class="text-right">
+                  <div class="flex justify-end items-center gap-1">
+                    @if (canManage()) {
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina prodotto" aria-label="Elimina prodotto" (click)="openDeleteProductDialog(product.id)"><ng-icon name="lucideTrash2" size="16" /></button>
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="canManage() ? 'Modifica prodotto' : 'Apri prodotto'" [attr.aria-label]="canManage() ? 'Modifica prodotto' : 'Apri prodotto'" (click)="goToProductEdit(product.id)"><ng-icon [name]="canManage() ? 'lucidePencil' : 'lucideEye'" size="16" /></button>
+                    }
+                    <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Apri workspace" aria-label="Apri workspace" (click)="goToProductWorkspace(product.id)"><ng-icon name="lucideFolderOpen" size="16" /></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun prodotto trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>
+
+<!-- Delete dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare prodotto?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare il prodotto <strong>{{ selectedProduct?.name }}</strong>? <br> 
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+      <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+      @if (integrationsEnabled) {
+        <p hlmDialogDescription>
+          Per sicurezza, gli elementi associati <strong>NON verranno eliminati</strong>. Verifica che non ci siano più elementi associati
+          a questo prodotto, sia in Rocket che nei sistemi integrati, tra cui:
+        </p>
+        <ul hlmDialogDescription>
+          <li>- Stripe</li>
+        </ul>
+      }
+    </hlm-dialog-header>
+    <div class="grid gap-4 mt-4">
+      <div class="grid gap-3">
+        <form [formGroup]="deleteForm">
+          <hlm-hint class="text-left">Per confermare, digita il nome del prodotto.</hlm-hint>
+          <input hlmInput id="name" formControlName="name" autocomplete="off" />
+        </form>
+      </div>
+    </div>
+    <hlm-error>
+      {{ errorMessage() }}
+    </hlm-error>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteProductDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteProduct()" [disabled]="deleteForm.invalid || isLoading()">{{ isLoading() ? 'Caricamento...' : 'Conferma' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

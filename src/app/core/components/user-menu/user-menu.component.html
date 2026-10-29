@@ -1,0 +1,108 @@
+<ul hlmSidebarMenu>
+  <li hlmSidebarMenuItem>
+    <button
+      type="button"
+      hlmSidebarMenuButton
+      size="lg"
+      class="h-auto hover:bg-sidebar-border hover:text-sidebar-foreground data-[state=open]:bg-sidebar-border data-[state=open]:text-sidebar-foreground"
+      [hlmDropdownMenuTrigger]="userMenu"
+      side="top"
+      align="start"
+    >
+      <span class="relative flex shrink-0">
+        <hlm-avatar class="size-8 rounded-lg">
+          @if (avatarUrl()) {
+            <img [src]="avatarUrl()" [alt]="fullName()" class="rounded-lg" hlmAvatarImage />
+          }
+          <span class="bg-primary text-primary-foreground text-xs rounded-lg" hlmAvatarFallback>{{ initials() }}</span>
+        </hlm-avatar>
+        @if (hasUnreadMessages()) {
+          <span class="rk-unread-dot absolute -top-0.5 -right-0.5" aria-label="Nuove risposte dal supporto"></span>
+        }
+      </span>
+      <span class="flex flex-1 min-w-0 flex-col gap-0.5 text-left leading-none">
+        <span class="truncate text-sm font-semibold">{{ fullName() }}</span>
+        <span class="truncate text-xs">{{ profileLabel() || currentUser()?.email }}</span>
+      </span>
+      <ng-icon name="lucideChevronsUpDown" size="16" class="ml-auto" />
+    </button>
+  </li>
+</ul>
+
+<!-- User menu -->
+<ng-template #userMenu>
+  <hlm-dropdown-menu class="w-58" sideOffset="2">
+    <hlm-dropdown-menu-label class="flex items-center gap-3 px-2 py-2 font-normal">
+      <hlm-avatar class="size-9">
+        @if (avatarUrl()) {
+          <img [src]="avatarUrl()" [alt]="fullName()" hlmAvatarImage />
+        }
+        <span class="bg-primary text-primary-foreground text-xs" hlmAvatarFallback>{{ initials() }}</span>
+      </hlm-avatar>
+      <span class="grid min-w-0 leading-tight">
+        <span class="truncate text-sm font-medium">{{ fullName() }}</span>
+        <span class="truncate text-xs text-muted-foreground">{{ currentUser()?.email }}</span>
+      </span>
+    </hlm-dropdown-menu-label>
+
+    <hlm-dropdown-menu-separator />
+
+    <hlm-dropdown-menu-group>
+      <button type="button" hlmDropdownMenuItem (click)="openProfile('dati')">
+        <ng-icon name="lucideUserRoundCog" size="16" />
+        Profilo
+      </button>
+      @if (canViewResellerCard()) {
+        <button type="button" hlmDropdownMenuItem (click)="openResellerCard()">
+          <ng-icon name="lucideIdCard" size="16" />
+          Scheda rivenditore
+        </button>
+      }
+      <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+      @if (integrationsEnabled) {
+        <button type="button" hlmDropdownMenuItem (click)="openSupport()">
+          <ng-icon name="lucideMessageCircleQuestion" size="16" />
+          Supporto
+          @if (hasUnreadMessages()) {
+            <span class="ml-auto flex items-center gap-1.5 text-xs text-sidebar-accent-foreground">
+              <span class="rk-unread-dot rk-unread-dot--inline"></span>
+              Nuove risposte
+            </span>
+          }
+        </button>
+      }
+    </hlm-dropdown-menu-group>
+
+    <hlm-dropdown-menu-separator />
+
+    <button type="button" hlmDropdownMenuItem variant="destructive" (click)="logoutDialogState.set('open')">
+      <ng-icon name="lucideLogOut" size="16" />
+      Esci
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>
+
+<!-- Profile and settings -->
+<hlm-dialog [state]="profileDialogState()" (closed)="closeProfile()" aria-label="Profilo e impostazioni">
+  <hlm-dialog-content class="w-220 max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] p-0 gap-0 overflow-hidden" *brnDialogContent="let ctx">
+    <rocket-account-settings
+      [avatarUrl]="avatarUrl()"
+      [activeTab]="profileTab() ?? 'dati'"
+      (activeTabChange)="openProfile($event, true)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Logout confirmation -->
+<hlm-dialog [state]="logoutDialogState()" (closed)="logoutDialogState.set('closed')">
+  <hlm-dialog-content class="w-[400px]" *brnDialogContent="let ctx">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Vuoi uscire?</h3>
+      <p hlmDialogDescription>Dovrai inserire di nuovo email e password per rientrare.</p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" (click)="logoutDialogState.set('closed')">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="logout()">Esci</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

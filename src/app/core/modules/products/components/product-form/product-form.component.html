@@ -1,0 +1,783 @@
+<form [formGroup]="productForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="['integrations', 'tenant-structure', 'user-structure', 'logo'].includes(steps.activeTab()) ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Informazioni di base -->
+      <div hlmTabsContent="info" class="flex flex-col gap-6 animate-rk-rise">
+        <!-- Product -->
+        <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+          <!-- Name -->
+          <div class="flex flex-col gap-2 flex-1">
+            <label hlmLabel for="name">Nome*</label>
+            <input type="text" id="name" placeholder="Nome del prodotto" hlmInput formControlName="name" autocomplete="off" />
+          </div>
+
+          <!-- Prefix -->
+          <div class="flex flex-col gap-2 flex-1">
+            <label hlmLabel for="prefix">Prefisso*</label>
+            <input type="text" id="prefix" placeholder="Prefisso del prodotto" hlmInput formControlName="prefix" autocomplete="off" class="font-mono" />
+          </div>
+
+          <!-- Status (only if productData exists) -->
+          @if (productData()) {
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="status">Stato*</label>
+              <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="status" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                    <hlm-option value="ACTIVE">Attivo</hlm-option>
+                    <hlm-option value="INACTIVE">Inattivo</hlm-option>
+                </hlm-select-content>
+              </brn-select>
+            </div>
+          }
+
+          <!-- Domain (only if productData exists) -->
+          @if (productData()) {
+            <div class="flex flex-col gap-2 flex-1">
+              <div class="flex items-center justify-between">
+                <label hlmLabel for="domain">Dominio</label>
+                <ng-icon
+                  name="lucideInfo"
+                  size="14"
+                  class="text-muted-foreground cursor-pointer"
+                  hlmTooltip="Inserire solo il nome di dominio (es. example.com), non un link"
+                />
+              </div>
+              <input type="text" id="domain" placeholder="Dominio del prodotto" hlmInput formControlName="domain" autocomplete="off" />
+              @if (productForm.get('domain')?.invalid && productForm.get('domain')?.touched) {
+                <p class="text-destructive text-sm">Inserire solo il nome di dominio, non un link (caratteri "//" e ":" non ammessi).</p>
+              }
+            </div>
+          }
+
+          <!-- Description -->
+          <div class="flex flex-col gap-2" [class.col-span-2]="productData()" [class.col-span-3]="!productData()">
+            <label hlmLabel for="description">Descrizione</label>
+            <input id="description" placeholder="Descrizione del prodotto" hlmInput formControlName="description" autocomplete="off" />
+          </div>
+
+          <!-- Payment method (commented out - contracts are now assumed annual)
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="paymentType">Metodo di pagamento*</label>
+            <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="paymentType" class="w-full">
+              <hlm-select-trigger class="w-full">
+                <hlm-select-value />
+              </hlm-select-trigger>
+              <hlm-select-content>
+                @for (paymentType of paymentTypes; track paymentType) {
+                  <hlm-option [value]="paymentType">{{ paymentType | paymentType }}</hlm-option>
+                }
+              </hlm-select-content>
+            </brn-select>
+          </div>
+          -->
+        </div>
+
+        <!-- Trial -->
+        <div class="flex flex-col gap-4 border-t pt-6">
+          <h3 class="text-sm font-semibold">Trial</h3>
+          <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+            <!-- Default trial duration -->
+            <div class="flex flex-col gap-2 flex-1">
+              <label hlmLabel for="defaultTrialDuration">Durata predefinita</label>
+              <hlm-input-group>
+                <input type="number" id="defaultTrialDuration" placeholder="Giorni di durata" hlmInputGroupInput formControlName="defaultTrialDuration" step="1" min="1" autocomplete="off" />
+                <hlm-input-group-addon align="inline-end">
+                  <span hlmInputGroupText>giorni</span>
+                </hlm-input-group-addon>
+              </hlm-input-group>
+            </div>
+
+            <!-- Trials users limit -->
+            <div class="flex flex-col gap-2 flex-1">
+              <div class="flex items-center justify-between">
+                <label hlmLabel for="trialsUsersLimit">Utenti di trial</label>
+                <div class="h-3.5 overflow-visible flex items-center gap-2">
+                  <span class="text-sm text-muted-foreground">Illimitato</span>
+                  <hlm-switch id="hasTrialsUsersLimit" formControlName="hasTrialsUsersLimit" />
+                </div>
+              </div>
+              <input
+                type="number"
+                id="trialsUsersLimit"
+                [placeholder]="productForm.controls.hasTrialsUsersLimit.value ? 'Illimitati' : 'Limite utenti'"
+                hlmInput
+                formControlName="trialsUsersLimit"
+                step="1"
+                min="0"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Sales network -->
+        <div class="flex flex-col gap-4 border-t pt-6">
+          <h3 class="text-sm font-semibold">Rete di vendita</h3>
+          <label for="resellerPlansEnabled" class="flex items-center justify-between gap-4 rounded-md border px-4 py-3 cursor-pointer">
+            <span class="flex flex-col gap-1">
+              <span class="text-sm font-medium">Piani rivenditore</span>
+              <span class="text-sm text-muted-foreground">Abilita piani e contratti verso rivenditori</span>
+            </span>
+            <hlm-switch id="resellerPlansEnabled" formControlName="resellerPlansEnabled" />
+          </label>
+          <!-- Professional plans: hidden, the reseller network is single-level for now -->
+        </div>
+
+        <!-- Cognito -->
+        <div class="flex flex-col gap-4 border-t pt-6">
+          <h3 class="text-sm font-semibold">Cognito</h3>
+          <div class="w-full grid grid-cols-2 gap-x-8 gap-y-8">
+            <!-- Custom attributes -->
+            <rocket-tags-input
+              class="flex flex-col flex-1"
+              formControlName="customAttributes"
+              inputType="text"
+              placeholder="Inserisci un attributo"
+              label="Attributi custom"
+              [required]="false"
+            />
+
+            <!-- User groups -->
+            <rocket-tags-input
+              class="flex flex-col flex-1"
+              formControlName="roles"
+              inputType="text"
+              placeholder="Inserisci un ruolo"
+              label="Ruoli"
+              [required]="false"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Integrazioni -->
+      <div hlmTabsContent="integrations" class="animate-rk-rise">
+        <div class="w-full flex flex-col gap-4">
+          <!-- Hubspot -->
+          <section hlmCard hlmCollapsible class="py-0 gap-0">
+            <button hlmCollapsibleTrigger type="button" class="group w-full flex items-center gap-4 px-6 py-4 text-left cursor-pointer">
+              <span class="rk-icon-tile size-10"><ng-icon name="lucideHandshake" size="18" /></span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-base font-semibold">HubSpot</span>
+                <span class="text-sm text-muted-foreground truncate">{{ integrationSummary('hubspot') }}</span>
+              </span>
+              <span hlmBadge variant="outline" rocketIntegrationStatus [configured]="isConfigured('hubspot')">{{ isConfigured('hubspot') ? 'Collegato' : 'Da configurare' }}</span>
+              <ng-icon name="lucideChevronDown" size="16" class="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+            <div hlmCollapsibleContent class="border-t px-6 py-6">
+              <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                <!-- Solution of interest -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="hubspotSolution">Soluzione d'interesse</label>
+                  <input type="text" id="hubspotSolution" placeholder="Valore su HubSpot" hlmInput formControlName="hubspotSolution" autocomplete="off" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Intercom -->
+          <section hlmCard hlmCollapsible class="py-0 gap-0">
+            <button hlmCollapsibleTrigger type="button" class="group w-full flex items-center gap-4 px-6 py-4 text-left cursor-pointer">
+              <span class="rk-icon-tile size-10"><ng-icon name="lucideMessageCircle" size="18" /></span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-base font-semibold">Intercom</span>
+                <span class="text-sm text-muted-foreground truncate">{{ integrationSummary('intercom') }}</span>
+              </span>
+              <span hlmBadge variant="outline" rocketIntegrationStatus [configured]="isConfigured('intercom')">{{ isConfigured('intercom') ? 'Collegato' : 'Da configurare' }}</span>
+              <ng-icon name="lucideChevronDown" size="16" class="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+            <div hlmCollapsibleContent class="border-t px-6 py-6">
+              <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                <!-- Brand -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="intercomBrand">Brand</label>
+                  <hlm-combobox formControlName="intercomBrand" [filter]="comboboxContainsFilter" [itemToString]="brandLabel">
+                    <hlm-combobox-input id="intercomBrand" placeholder="Cerca un brand" />
+                    <ng-template hlmComboboxPortal>
+                      <hlm-combobox-content>
+                        <div hlmComboboxList>
+                          @for (brand of intercomBrands(); track brand) {
+                            <hlm-combobox-item [value]="brand" class="cursor-pointer">{{ brand }}</hlm-combobox-item>
+                          }
+                          <div hlmComboboxEmpty [class.flex!]="intercomBrands().length === 0">Nessun brand trovato</div>
+                        </div>
+                      </hlm-combobox-content>
+                    </ng-template>
+                  </hlm-combobox>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Sentry -->
+          <section hlmCard hlmCollapsible class="py-0 gap-0">
+            <button hlmCollapsibleTrigger type="button" class="group w-full flex items-center gap-4 px-6 py-4 text-left cursor-pointer">
+              <span class="rk-icon-tile size-10"><ng-icon name="lucideActivity" size="18" /></span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-base font-semibold">Sentry e disponibilità</span>
+                <span class="text-sm text-muted-foreground truncate">{{ integrationSummary('sentry') }}</span>
+              </span>
+              <span hlmBadge variant="outline" rocketIntegrationStatus [configured]="isConfigured('sentry')">{{ isConfigured('sentry') ? 'Collegato' : 'Da configurare' }}</span>
+              <ng-icon name="lucideChevronDown" size="16" class="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+            <div hlmCollapsibleContent class="border-t px-6 py-6">
+              <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                <!-- Sentry project -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="sentryProjectId">Progetto Sentry</label>
+                  <hlm-combobox formControlName="sentryProjectId" [filter]="comboboxContainsFilter" [itemToString]="sentryProjectLabel">
+                    <hlm-combobox-input id="sentryProjectId" placeholder="Cerca un progetto" />
+                    <ng-template hlmComboboxPortal>
+                      <hlm-combobox-content>
+                        <div hlmComboboxList>
+                          @for (project of sentryProjects(); track project.id) {
+                            <hlm-combobox-item [value]="project.id" class="cursor-pointer">{{ project.name }} ({{ project.slug }})</hlm-combobox-item>
+                          }
+                          <div hlmComboboxEmpty [class.flex!]="sentryProjects().length === 0">Nessun progetto trovato</div>
+                        </div>
+                      </hlm-combobox-content>
+                    </ng-template>
+                  </hlm-combobox>
+                </div>
+
+                <!-- Health address -->
+                <div class="flex flex-col gap-2 flex-1 col-span-2">
+                  <label hlmLabel for="healthCheckUrl">Indirizzo di salute</label>
+                  <input type="text" id="healthCheckUrl" placeholder="https://.../health" hlmInput formControlName="healthCheckUrl" autocomplete="off" class="font-mono" />
+                  @if (productForm.get('healthCheckUrl')?.invalid && productForm.get('healthCheckUrl')?.touched) {
+                    <p class="text-destructive text-sm">Inserire un indirizzo completo, che inizi con https://.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Stripe -->
+          <section hlmCard hlmCollapsible class="py-0 gap-0">
+            <button hlmCollapsibleTrigger type="button" class="group w-full flex items-center gap-4 px-6 py-4 text-left cursor-pointer">
+              <span class="rk-icon-tile size-10"><ng-icon name="lucideCreditCard" size="18" /></span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-base font-semibold">Stripe</span>
+                <span class="text-sm text-muted-foreground truncate">{{ integrationSummary('stripe') }}</span>
+              </span>
+              <span hlmBadge variant="outline" rocketIntegrationStatus [configured]="isConfigured('stripe')">{{ isConfigured('stripe') ? 'Collegato' : 'Da configurare' }}</span>
+              <ng-icon name="lucideChevronDown" size="16" class="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+            <div hlmCollapsibleContent class="border-t px-6 py-6">
+              <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                <!-- API key -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="stripeApiKey">API key</label>
+                  @if (isSecretMasked('stripeApiKey')) {
+                    <div class="h-9 flex items-center gap-2 rounded-md border bg-muted pl-3 pr-1 min-w-0">
+                      <ng-icon name="lucideKeyRound" size="16" class="text-muted-foreground shrink-0" />
+                      <span class="flex-1 min-w-0 truncate font-mono text-sm">{{ maskSecret(productData()?.stripeApiKey ?? '') }}</span>
+                      <button hlmBtn variant="ghost" size="sm" type="button" (click)="replaceSecret('stripeApiKey')">Sostituisci</button>
+                    </div>
+                  } @else {
+                    <div class="flex items-center gap-2">
+                      <input type="text" id="stripeApiKey" placeholder="sk_live_..." hlmInput formControlName="stripeApiKey" autocomplete="off" class="w-full font-mono" />
+                      @if (replacingSecrets().has('stripeApiKey')) {
+                        <button hlmBtn variant="ghost" size="sm" type="button" (click)="keepSecret('stripeApiKey')">Annulla</button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Webhook secret -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="stripeWebhookSecret">Webhook secret</label>
+                  @if (isSecretMasked('stripeWebhookSecret')) {
+                    <div class="h-9 flex items-center gap-2 rounded-md border bg-muted pl-3 pr-1 min-w-0">
+                      <ng-icon name="lucideKeyRound" size="16" class="text-muted-foreground shrink-0" />
+                      <span class="flex-1 min-w-0 truncate font-mono text-sm">{{ maskSecret(productData()?.stripeWebhookSecret ?? '') }}</span>
+                      <button hlmBtn variant="ghost" size="sm" type="button" (click)="replaceSecret('stripeWebhookSecret')">Sostituisci</button>
+                    </div>
+                  } @else {
+                    <div class="flex items-center gap-2">
+                      <input type="text" id="stripeWebhookSecret" placeholder="whsec_..." hlmInput formControlName="stripeWebhookSecret" autocomplete="off" class="w-full font-mono" />
+                      @if (replacingSecrets().has('stripeWebhookSecret')) {
+                        <button hlmBtn variant="ghost" size="sm" type="button" (click)="keepSecret('stripeWebhookSecret')">Annulla</button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Tax rate -->
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel for="stripeTaxRateId">Tax rate id</label>
+                  <input type="text" id="stripeTaxRateId" placeholder="txr_..." hlmInput formControlName="stripeTaxRateId" autocomplete="off" class="font-mono" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Mixpanel -->
+          <section hlmCard hlmCollapsible class="py-0 gap-0">
+            <button hlmCollapsibleTrigger type="button" class="group w-full flex items-center gap-4 px-6 py-4 text-left cursor-pointer">
+              <span class="rk-icon-tile size-10"><ng-icon name="lucideChartLine" size="18" /></span>
+              <span class="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span class="text-base font-semibold">Mixpanel</span>
+                <span class="text-sm text-muted-foreground truncate">{{ integrationSummary('mixpanel') }}</span>
+              </span>
+              <span hlmBadge variant="outline" rocketIntegrationStatus [configured]="isConfigured('mixpanel')">{{ isConfigured('mixpanel') ? 'Collegato' : 'Da configurare' }}</span>
+              <ng-icon name="lucideChevronDown" size="16" class="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+            <div hlmCollapsibleContent class="border-t px-6 py-6">
+              <div class="flex flex-col gap-6">
+                <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                  <!-- Project -->
+                  <div class="flex flex-col gap-2 flex-1">
+                    <label hlmLabel for="mixpanelProjectId">Project ID</label>
+                    <input type="text" id="mixpanelProjectId" placeholder="ID progetto Mixpanel" hlmInput formControlName="mixpanelProjectId" autocomplete="off" class="font-mono" />
+                  </div>
+                </div>
+
+                <!-- Rules, by lever -->
+                <div formArrayName="mixpanelRules" class="flex flex-col border-t divide-y">
+                  @for (lever of levers; track lever) {
+                    @let leverRules = rulesOf(lever);
+                    <div class="flex flex-col gap-3 py-6 last:pb-0">
+                      <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-semibold text-foreground">
+                          {{ lever | mixpanelLever }}
+                          <span class="font-normal text-muted-foreground">· {{ leverRules.length }} {{ leverRules.length === 1 ? 'regola' : 'regole' }}</span>
+                        </h4>
+                        <button hlmBtn variant="ghost" size="sm" type="button" (click)="addMixpanelRule($event, lever)">
+                          Aggiungi regola
+                          <ng-icon name="lucidePlus" hlm />
+                        </button>
+                      </div>
+
+                      @for (entry of leverRules; track entry.rule) {
+                        @let rule = entry.rule;
+                        @let i = entry.index;
+                        @let open = openRules().has(rule);
+                        @let bands = ruleBands(rule);
+                        <div [formGroupName]="i" class="rounded-md border bg-muted">
+                          <!-- Rule as a sentence -->
+                          <div class="flex items-center gap-4 px-4 py-3">
+                            <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+                              <div class="flex flex-wrap items-center gap-2">
+                                @if (rule.controls.shape.value; as shape) {
+                                  <span hlmBadge variant="outline">{{ shape | mixpanelRuleShape }}</span>
+                                }
+                                @if (rule.controls.observationOnly.value) {
+                                  <span hlmBadge variant="outline" class="rk-status bg-status-info-tint text-status-info [--status-dot:var(--status-info-dot)]">In osservazione</span>
+                                }
+                              </div>
+                              <!-- One line on purpose: the line breaks would add spaces before the commas -->
+                              <p class="text-base leading-relaxed">@for (part of ruleSentence(rule); track $index) {@if (part.code) {<code class="font-mono text-sm px-1.5 py-0.5 rounded border bg-background">{{ part.text || '-' }}</code>} @else {<span>{{ part.text }}</span>}}</p>
+                            </div>
+                            @if (bands) {
+                              <div class="flex items-center gap-1 shrink-0">
+                                <span hlmBadge variant="outline" class="rk-status bg-status-success-tint text-status-success [--status-dot:var(--status-success-dot)]">{{ bands.green }}</span>
+                                <span hlmBadge variant="outline" class="rk-status bg-status-warning-tint text-status-warning [--status-dot:var(--status-warning-dot)]">{{ bands.yellow }}</span>
+                                <span hlmBadge variant="outline" class="rk-status bg-destructive-tint text-destructive [--status-dot:var(--status-destructive-dot)]">{{ bands.red }}</span>
+                              </div>
+                            }
+                            <div class="flex items-center gap-1 shrink-0">
+                              <button hlmBtn variant="ghost" size="sm" type="button" (click)="toggleRule(rule)">
+                                @if (open) {
+                                  Chiudi
+                                } @else {
+                                  <ng-icon name="lucidePencil" size="16" />
+                                  Modifica
+                                }
+                              </button>
+                              <button hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina regola" aria-label="Elimina regola" (click)="openDeleteFieldDialog('mixpanel', i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                            </div>
+                          </div>
+
+                          <!-- Rule editor: what it measures, over which period, against which thresholds -->
+                          @if (open) {
+                            <div class="border-t p-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+                              <div class="rounded-md border bg-background p-4 flex flex-col gap-4 min-w-0">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cosa misura</span>
+                                <!-- Shape -->
+                                <div class="flex flex-col gap-2">
+                                  <label hlmLabel [for]="'rule-shape-' + i">Forma</label>
+                                  <brn-select class="w-full" placeholder="Scegli la forma" formControlName="shape">
+                                    <hlm-select-trigger class="w-full" [id]="'rule-shape-' + i">
+                                      <hlm-select-value />
+                                    </hlm-select-trigger>
+                                    <hlm-select-content>
+                                      @for (option of ruleShapes; track option) {
+                                        <hlm-option [value]="option">{{ option | mixpanelRuleShape }}</hlm-option>
+                                      }
+                                    </hlm-select-content>
+                                  </brn-select>
+                                </div>
+
+                                <!-- Inactivity scope -->
+                                @if (showsRuleField(rule, 'inactivityScope')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-inactivityScope-' + i">Misura su</label>
+                                    <brn-select class="w-full" placeholder="Scegli" formControlName="inactivityScope">
+                                      <hlm-select-trigger class="w-full" [id]="'rule-inactivityScope-' + i">
+                                        <hlm-select-value />
+                                      </hlm-select-trigger>
+                                      <hlm-select-content>
+                                        @for (option of inactivityScopes; track option) {
+                                          <hlm-option [value]="option">{{ option | mixpanelInactivityScope }}</hlm-option>
+                                        }
+                                      </hlm-select-content>
+                                    </brn-select>
+                                  </div>
+                                }
+
+                                <!-- Events -->
+                                @if (showsRuleField(rule, 'eventNames')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-eventNames-' + i">Eventi</label>
+                                    <input type="text" [id]="'rule-eventNames-' + i" hlmInput formControlName="eventNames" autocomplete="off" class="font-mono" [placeholder]="rule.controls.shape.value === RuleShape.Inactivity ? (rule.controls.inactivityScope.value === 'OBJECT' ? 'Qualsiasi evento' : 'Nucleo comune') : 'es. timesheet_created'" />
+                                  </div>
+                                }
+
+                                <!-- Anchor events -->
+                                @if (showsRuleField(rule, 'anchorEventNames')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-anchorEventNames-' + i">{{ rule.controls.shape.value === RuleShape.Milestone ? 'Eventi di partenza' : 'Eventi di base' }}</label>
+                                    <input type="text" [id]="'rule-anchorEventNames-' + i" hlmInput formControlName="anchorEventNames" autocomplete="off" class="font-mono" [placeholder]="rule.controls.shape.value === RuleShape.Milestone ? 'Consegna delle credenziali' : 'Qualsiasi evento'" />
+                                  </div>
+                                }
+
+                                <!-- Property -->
+                                @if (showsRuleField(rule, 'property')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-property-' + i">Proprietà</label>
+                                    <input type="text" [id]="'rule-property-' + i" hlmInput formControlName="property" autocomplete="off" class="font-mono" [placeholder]="rule.controls.shape.value === RuleShape.PropertyAverage ? 'es. variance_percentage' : 'es. project_id'" />
+                                  </div>
+                                }
+
+                                <!-- Closing events -->
+                                @if (showsRuleField(rule, 'closingEventNames')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-closingEventNames-' + i">Eventi di chiusura</label>
+                                    <input type="text" [id]="'rule-closingEventNames-' + i" hlmInput formControlName="closingEventNames" autocomplete="off" class="font-mono" placeholder="es. project_completed" />
+                                  </div>
+                                }
+
+                                <!-- User roles -->
+                                @if (showsRuleField(rule, 'userRoles')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-userRoles-' + i">Ruoli degli utenti</label>
+                                    <input type="text" [id]="'rule-userRoles-' + i" hlmInput formControlName="userRoles" autocomplete="off" class="font-mono" placeholder="Tutti" />
+                                  </div>
+                                }
+                              </div>
+
+                              <div class="rounded-md border bg-background p-4 flex flex-col gap-4 min-w-0">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Periodo</span>
+                                <!-- Window -->
+                                @if (showsRuleField(rule, 'windowValue')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-windowValue-' + i">Finestra</label>
+                                    <input type="number" [id]="'rule-windowValue-' + i" hlmInput formControlName="windowValue" step="1" min="1" placeholder="N" autocomplete="off" />
+                                  </div>
+                                }
+
+                                <!-- Unit -->
+                                @if (rule.controls.shape.value) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-unit-' + i">Unità</label>
+                                    <brn-select class="w-full" placeholder="Unità" formControlName="unit">
+                                      <hlm-select-trigger class="w-full" [id]="'rule-unit-' + i">
+                                        <hlm-select-value />
+                                      </hlm-select-trigger>
+                                      <hlm-select-content>
+                                        @for (option of ruleUnits; track option) {
+                                          <hlm-option [value]="option">{{ option | mixpanelRuleUnit }}</hlm-option>
+                                        }
+                                      </hlm-select-content>
+                                    </brn-select>
+                                  </div>
+                                }
+
+                                <!-- Per active user -->
+                                @if (showsRuleField(rule, 'perActiveUser')) {
+                                  <label hlmLabel class="flex items-center gap-2">
+                                    <hlm-checkbox [id]="'rule-perActiveUser-' + i" formControlName="perActiveUser" />
+                                    Per utente attivo
+                                  </label>
+                                }
+                              </div>
+
+                              <div class="rounded-md border bg-background p-4 flex flex-col gap-4 min-w-0">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Soglie</span>
+                                <!-- Direction -->
+                                @if (showsRuleField(rule, 'direction')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-direction-' + i">Valore buono</label>
+                                    <brn-select class="w-full" placeholder="Scegli" formControlName="direction">
+                                      <hlm-select-trigger class="w-full" [id]="'rule-direction-' + i">
+                                        <hlm-select-value />
+                                      </hlm-select-trigger>
+                                      <hlm-select-content>
+                                        @for (option of ruleDirections; track option) {
+                                          <hlm-option [value]="option">{{ option | mixpanelRuleDirection }}</hlm-option>
+                                        }
+                                      </hlm-select-content>
+                                    </brn-select>
+                                  </div>
+                                }
+
+                                <!-- Thresholds -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="flex flex-col gap-2">
+                                      <label hlmLabel [for]="'rule-greenThreshold-' + i"><span class="size-2 rounded-full bg-[var(--status-success-dot)]"></span>Verde</label>
+                                      <input type="number" [id]="'rule-greenThreshold-' + i" hlmInput formControlName="greenThreshold" min="0" placeholder="Conforme fino a" autocomplete="off" />
+                                    </div>
+                                    <div class="flex flex-col gap-2">
+                                      <label hlmLabel [for]="'rule-yellowThreshold-' + i"><span class="size-2 rounded-full bg-[var(--status-warning-dot)]"></span>Giallo</label>
+                                      <input type="number" [id]="'rule-yellowThreshold-' + i" hlmInput formControlName="yellowThreshold" min="0" placeholder="In attenzione fino a" autocomplete="off" />
+                                    </div>
+                                </div>
+
+                                <!-- Minimum sample -->
+                                @if (showsRuleField(rule, 'minSample')) {
+                                  <div class="flex flex-col gap-2">
+                                    <label hlmLabel [for]="'rule-minSample-' + i">Campione minimo</label>
+                                    <input type="number" [id]="'rule-minSample-' + i" hlmInput formControlName="minSample" step="1" min="1" placeholder="1" autocomplete="off" />
+                                  </div>
+                                }
+
+                                <!-- Observation -->
+                                <label hlmLabel class="flex items-center gap-2">
+                                  <hlm-checkbox [id]="'rule-observationOnly-' + i" formControlName="observationOnly" />
+                                  In osservazione
+                                </label>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      } @empty {
+                        <p class="text-sm text-muted-foreground">Nessuna regola.</p>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Struttura tenants -->
+      <div hlmTabsContent="tenant-structure" class="animate-rk-rise">
+        <div class="w-full flex gap-x-8 gap-y-8">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <thead hlmTHead>
+                <tr hlmTr class="bg-background hover:bg-background">
+                  <th hlmTh class="w-10"></th>
+                  <th hlmTh>Nome</th>
+                  <th hlmTh>Tipo</th>
+                  <th hlmTh class="text-center">Richiesto</th>
+                  <th hlmTh class="text-center">Array</th>
+                  <th hlmTh class="text-center">Generato</th>
+                  <th hlmTh class="text-center">Non modificabile</th>
+                  <th hlmTh class="text-center"></th>
+                </tr>
+              </thead>
+              <tbody hlmTBody formArrayName="tenantStructure" #tenantTableBody>
+                @for (field of tenantStructureControls; track field; let i = $index) {
+                  <tr hlmTr [formGroupName]="i">
+                    <!-- Drag handle -->
+                    <td hlmTd class="cursor-move drag-handle">
+                      <div class="flex items-center justify-center p-1">
+                        <ng-icon name="lucideGripVertical" size="18" class="text-muted-foreground hover:text-foreground transition-colors" />
+                      </div>
+                    </td>
+                    <td hlmTd>
+                      <input type="text" [id]="'tenant-name-' + i" placeholder="Nome" hlmInput formControlName="name" autocomplete="off" />
+                    </td>
+                    <td hlmTd>
+                      <brn-select class="inline-block" placeholder="Seleziona uno tipo" formControlName="type" class="w-full">
+                        <hlm-select-trigger class="w-full">
+                          <hlm-select-value />
+                        </hlm-select-trigger>
+                        <hlm-select-content>
+                          @for (fieldType of fieldTypes; track fieldType) {
+                            <hlm-option [value]="fieldType">{{ fieldType | type }}</hlm-option>
+                          }
+                        </hlm-select-content>
+                      </brn-select>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'tenant-required-' + i" formControlName="required"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'tenant-array-' + i" formControlName="array"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'tenant-generated-' + i" formControlName="generated"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'tenant-notModifiable-' + i" formControlName="notModifiable"/>
+                    </td>
+                    <td hlmTd class="text-right">
+                      <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina campo" aria-label="Elimina campo" (click)="openDeleteFieldDialog('tenant', i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <!-- Adding field row -->
+            <div class="w-full flex justify-center items-center py-4">
+              <button (click)="addStructureField('tenant', $event)" hlmBtn variant="ghost">
+                Aggiungi campo
+                <ng-icon name="lucidePlus" hlm />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Struttura users -->
+      <div hlmTabsContent="user-structure" class="animate-rk-rise">
+        <div class="w-full flex gap-8">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <thead hlmTHead>
+                <tr hlmTr class="bg-background hover:bg-background">
+                  <th hlmTh class="w-10"></th>
+                  <th hlmTh>Nome</th>
+                  <th hlmTh>Tipo</th>
+                  <th hlmTh class="text-center">Richiesto</th>
+                  <th hlmTh class="text-center">Array</th>
+                  <th hlmTh class="text-center">Generato</th>
+                  <th hlmTh class="text-center">Non modificabile</th>
+                  <th hlmTh class="text-center"></th>
+                </tr>
+              </thead>
+              <tbody hlmTBody formArrayName="userStructure" #userTableBody>
+                @for (field of userStructureControls; track field; let i = $index) {
+                  <tr hlmTr [formGroupName]="i">
+                    <!-- Drag handle -->
+                    <td hlmTd class="cursor-move drag-handle">
+                      <div class="flex items-center justify-center p-1">
+                        <ng-icon name="lucideGripVertical" size="18" class="text-muted-foreground hover:text-foreground transition-colors" />
+                      </div>
+                    </td>
+                    <td hlmTd>
+                      <input type="text" [id]="'user-name-' + i" placeholder="Nome" hlmInput formControlName="name" autocomplete="off" />
+                    </td>
+                    <td hlmTd>
+                      <brn-select class="inline-block" placeholder="Seleziona uno tipo" formControlName="type" class="w-full">
+                        <hlm-select-trigger class="w-full">
+                          <hlm-select-value />
+                        </hlm-select-trigger>
+                        <hlm-select-content>
+                          @for (fieldType of fieldTypes; track fieldType) {
+                            <hlm-option [value]="fieldType">{{ fieldType | type }}</hlm-option>
+                          }
+                        </hlm-select-content>
+                        </brn-select>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'user-required-' + i" formControlName="required"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'user-array-' + i" formControlName="array"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'user-generated-' + i" formControlName="generated"/>
+                    </td>
+                    <td hlmTd class="text-center">
+                      <hlm-checkbox [id]="'user-notModifiable-' + i" formControlName="notModifiable"/>
+                    </td>
+                    <td hlmTd class="text-right">
+                      <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina campo" aria-label="Elimina campo" (click)="openDeleteFieldDialog('user', i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <!-- Adding field row -->
+            <div class="w-full flex justify-center items-center py-4">
+              <button (click)="addStructureField('user', $event)" hlmBtn variant="ghost">
+                Aggiungi campo
+                <ng-icon name="lucidePlus" hlm />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logo -->
+      @if (productData()) {
+        <div hlmTabsContent="logo" class="animate-rk-rise">
+          <div
+            hlmItem
+            variant="outline"
+            class="border-dashed rounded-xl bg-card transition-colors"
+            rocketFileDropZone
+            [fileDropDisabled]="isUploadingLogo()"
+            (filesDropped)="onLogoSelected($event[0])"
+          >
+            <div hlmItemMedia>
+              <hlm-avatar class="size-20 border">
+                @if (logoUrl()) {
+                  <img [src]="logoUrl()" alt="Logo del prodotto" hlmAvatarImage class="object-contain p-2 bg-background" />
+                }
+                <span class="bg-muted text-muted-foreground" hlmAvatarFallback><ng-icon name="lucideImage" size="24" /></span>
+              </hlm-avatar>
+            </div>
+
+            <div hlmItemContent>
+              <div hlmItemTitle>Logo</div>
+              <p hlmItemDescription>Compare nell'elenco dei prodotti e nella scheda del rivenditore. Trascinalo qui oppure sceglilo. JPEG, PNG, WebP o SVG, fino a 5 MB.</p>
+              @if (logoError()) {
+                <p class="text-destructive text-xs mt-1">{{ logoError() }}</p>
+              }
+            </div>
+
+            <div hlmItemActions>
+              <button hlmBtn variant="outline" size="sm" type="button" [disabled]="isUploadingLogo()" (click)="logoInput.click()">
+                @if (isUploadingLogo()) {
+                  <ng-icon name="lucideLoader" size="16" class="animate-spin" />
+                  Caricamento…
+                } @else {
+                  <ng-icon name="lucideImagePlus" size="16" />
+                  {{ logoUrl() ? 'Sostituisci' : 'Carica' }}
+                }
+              </button>
+              <input #logoInput type="file" class="hidden" accept="image/jpeg,image/png,image/webp,image/svg+xml" (change)="onLogoChosen($event)" />
+            </div>
+          </div>
+        </div>
+      }
+      @if (steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>
+
+<!-- Delete field dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare l'elemento?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare questo elemento?<br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteFieldDialog()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteStructuredField()">Conferma</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

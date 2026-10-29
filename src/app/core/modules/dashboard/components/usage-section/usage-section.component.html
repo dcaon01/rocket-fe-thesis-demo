@@ -1,0 +1,71 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Utenze</h2>
+    <div class="flex items-center gap-3">
+      <brn-select class="inline-block w-40" placeholder="Attivati" (valueChange)="onLogicChange($event)">
+        <hlm-select-trigger class="w-40">
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <hlm-select-content>
+          <hlm-option value="ACTIVATED">Attivati</hlm-option>
+          <hlm-option value="ACTIVE">Attivi</hlm-option>
+        </hlm-select-content>
+      </brn-select>
+      <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onUsageTimeChange($event)">
+        <hlm-select-trigger class="w-40">
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <hlm-select-content>
+          <hlm-option value="MONTHLY">Mensile</hlm-option>
+          <hlm-option value="ANNUAL">Annuale</hlm-option>
+        </hlm-select-content>
+      </brn-select>
+    </div>
+  </div>
+
+  <!-- Usage cards -->
+  <div class="grid grid-cols-4 gap-6">
+    @if (isLoading() && usageCards.length === 0) {
+      <rocket-kpi-skeletons [count]="4" />
+    }
+    @for (card of usageCards; track card.name; let i = $index) {
+      <div hlmCard class="rk-kpi px-6">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-medium">{{ card.name }}</p>
+          <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+        </div>
+        <p class="text-2xl font-bold">{{ usageDisplayValues[i] }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- Usage charts -->
+  <div class="charts-row">
+    @if (!productId()) {
+      <div hlmCard class="chart-card pie-chart-card">
+        <h3 class="chart-title">{{ usageType() === 'ACTIVE' ? 'Utenti attivi per prodotto' : 'Utenti attivati per prodotto' }}</h3>
+        <div class="chart-container">
+          @if (isLoading() && !usagePieOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (usagePieOption) {
+            <div echarts [options]="usagePieOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    }
+
+    <div hlmCard class="chart-card line-chart-card">
+      <h3 class="chart-title">Andamento utenze</h3>
+      <div class="chart-container">
+        @if (isLoading() && !usageTrendLineOption) {
+          <hlm-skeleton class="size-full" />
+        }
+        @if (usageTrendLineOption) {
+          <div echarts [options]="usageTrendLineOption" class="w-full h-full"></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

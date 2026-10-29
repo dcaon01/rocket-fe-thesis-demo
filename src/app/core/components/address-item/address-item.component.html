@@ -1,0 +1,11 @@
+<span class="rk-icon-tile size-10"><ng-icon name="lucideMapPin" size="18" /></span>
+<div class="flex flex-col gap-0.5 min-w-0">
+  @if (street(); as street) {
+    <span class="text-base font-medium">{{ street }}</span>
+  } @else {
+    <span class="text-base text-muted-foreground">-</span>
+  }
+  @if (locality(); as locality) {
+    <span class="text-sm text-muted-foreground">{{ locality }}</span>
+  }
+</div>

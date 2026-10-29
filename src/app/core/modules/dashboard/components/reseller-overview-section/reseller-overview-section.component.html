@@ -1,0 +1,63 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Licenze e clienti</h2>
+
+    <!-- Period -->
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onOverviewTimeChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  <!-- Overview cards -->
+  <div class="grid grid-cols-4 gap-6">
+    @if (isLoading() && overviewCards.length === 0) {
+      <rocket-kpi-skeletons [count]="4" />
+    }
+    @for (card of overviewCards; track card.name; let i = $index) {
+      <div hlmCard class="rk-kpi px-6">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-medium">{{ card.name }}</p>
+          <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+        </div>
+        <p class="text-2xl font-bold">{{ overviewDisplayValues[i] }}</p>
+        @if (card.note) {
+          <p class="text-sm text-muted-foreground">{{ card.note }}</p>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Overview charts -->
+  <div class="charts-row">
+    <div hlmCard class="chart-card line-chart-card">
+      <h3 class="chart-title">Andamento licenze e attivazioni</h3>
+      <div class="chart-container">
+        @if (isLoading() && !overviewLineOption) {
+          <hlm-skeleton class="size-full" />
+        }
+        @if (overviewLineOption) {
+          <div echarts [options]="overviewLineOption" class="w-full h-full"></div>
+        }
+      </div>
+    </div>
+
+    <div hlmCard class="chart-card pie-chart-card">
+      <h3 class="chart-title">Licenze attive per prodotto</h3>
+      <div class="chart-container">
+        @if (isLoading() && !licensesPieOption) {
+          <hlm-skeleton class="size-full" />
+        }
+        @if (licensesPieOption) {
+          <div echarts [options]="licensesPieOption" class="w-full h-full"></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../rocket-be-thesis-demo"
+		},
+		{
+			"path": "../rocket-infra-thesis-demo"
+		}
+	],
+	"settings": {}
+}

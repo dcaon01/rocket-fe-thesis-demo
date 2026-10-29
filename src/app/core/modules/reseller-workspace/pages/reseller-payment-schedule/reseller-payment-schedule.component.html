@@ -1,0 +1,17 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Scadenziario" [description]="isReseller() ? 'Visualizza le scadenze in entrata, e in uscita e segna l\'incasso di quelle non pagate.' : 'Visualizza le scadenze del rivenditore in entrata e in uscita, sul calendario o in elenco.'">
+    <button hlmBtn variant="outline" size="sm" hlmTooltip="Aggiorna" aria-label="Aggiorna" (click)="schedule.reload()">
+      <ng-icon name="lucideRefreshCw" size="16" />
+    </button>
+    @if (canManage()) {
+      <a hlmBtn size="sm" routerLink="charges/new">
+        Nuova voce
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </a>
+    }
+  </rocket-page-header>
+
+  <!-- Schedule -->
+  <rocket-payment-schedule-tabs #schedule mode="resellerSchedule" />
+</div>

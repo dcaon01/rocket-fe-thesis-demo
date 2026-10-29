@@ -1,0 +1,176 @@
+<form [formGroup]="materialForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="steps.activeTab() === 'file' ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Contenuto -->
+      <div hlmTabsContent="contenuto" class="flex flex-col gap-6 animate-rk-rise">
+        <div class="flex flex-col gap-1">
+          <h2 hlmCardTitle class="text-lg font-semibold">Contenuto</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="title">Titolo*</label>
+              <input hlmInput id="title" formControlName="title" placeholder="Es. Listino Nquadro 2026" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Titolo</label>
+              @if (formValue().title; as title) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ title }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="description">Descrizione*</label>
+              <textarea hlmTextarea id="description" formControlName="description" placeholder="Una o due frasi che il rivenditore legge sullo scaffale" class="w-full"></textarea>
+            } @else {
+              <label hlmLabel>Descrizione</label>
+              @if (formValue().description; as description) {
+                <p class="text-base leading-relaxed whitespace-pre-line">{{ description }}</p>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <div class="flex flex-col gap-2">
+            @if (isTypeEditable()) {
+              <label hlmLabel for="type">Tipo*</label>
+              <brn-select id="type" placeholder="Seleziona un tipo" formControlName="type" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (type of materialTypes; track type) {
+                    <hlm-option [value]="type">{{ type | materialType }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            } @else {
+              <label hlmLabel>Tipo</label>
+              @if (formValue().type; as type) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ type | materialType }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          @if (isLink()) {
+            <div class="flex flex-col gap-2">
+              @if (isEditable()) {
+                <label hlmLabel for="externalUrl">Link*</label>
+                <input hlmInput id="externalUrl" formControlName="externalUrl" placeholder="https://" autocomplete="off" />
+              } @else {
+                <label hlmLabel>Link</label>
+                @if (formValue().externalUrl; as externalUrl) {
+                  <div class="min-h-9 flex items-center gap-1 min-w-0">
+                    <a class="text-base font-medium truncate underline-offset-4 hover:underline" [href]="externalUrl" target="_blank" rel="noopener">{{ externalUrl }}</a>
+                    <rocket-copy-button [value]="externalUrl" />
+                  </div>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Visibilità -->
+      <div hlmTabsContent="visibilita" class="flex flex-col gap-6 animate-rk-rise">
+        <div class="flex flex-col gap-1">
+          <h2 hlmCardTitle class="text-lg font-semibold">Visibilità</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          @if (!isEditable() || products().length > 0) {
+            <div class="flex flex-col gap-2">
+              <label hlmLabel>Prodotti</label>
+              @if (isEditable()) {
+                <button hlmBtn variant="outline" type="button" [hlmDropdownMenuTrigger]="productsMenu" align="start" class="justify-between" [disabled]="readonly()">
+                  <span class="truncate">{{ productsLabel() }}</span>
+                  <ng-icon name="lucideChevronDown" size="16" class="ml-2 opacity-60" />
+                </button>
+                <ng-template #productsMenu>
+                  <hlm-dropdown-menu>
+                    @for (product of products(); track product.id) {
+                      <button hlmDropdownMenuCheckbox [checked]="isProductSelected(product.id)" (triggered)="toggleProduct(product.id)">
+                        <hlm-dropdown-menu-checkbox-indicator />
+                        {{ product.name }}
+                      </button>
+                    }
+                  </hlm-dropdown-menu>
+                </ng-template>
+              } @else {
+                <div class="min-h-9 flex flex-wrap items-center gap-2">
+                  @for (product of selectedProducts(); track product.id) {
+                    <span hlmBadge variant="outline">{{ product.name }}</span>
+                  } @empty {
+                    <span class="text-base font-medium">Tutti i prodotti</span>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <div class="flex flex-col gap-2">
+            <label hlmLabel>Tipologie di rivenditore</label>
+            @if (isEditable()) {
+              <button hlmBtn variant="outline" type="button" [hlmDropdownMenuTrigger]="tiersMenu" align="start" class="justify-between" [disabled]="readonly()">
+                <span class="truncate">
+                  @if ((materialForm.value.resellerTiers ?? []).length) {
+                    @for (tier of materialForm.value.resellerTiers; track tier; let last = $last) {
+                      {{ tier | titlecase }}{{ last ? '' : ', ' }}
+                    }
+                  } @else {
+                    Tutte le tipologie
+                  }
+                </span>
+                <ng-icon name="lucideChevronDown" size="16" class="ml-2 opacity-60" />
+              </button>
+              <ng-template #tiersMenu>
+                <hlm-dropdown-menu>
+                  @for (tier of resellerTiers; track tier) {
+                    <button hlmDropdownMenuCheckbox [checked]="isTierSelected(tier)" (triggered)="toggleTier(tier)">
+                      <hlm-dropdown-menu-checkbox-indicator />
+                      {{ tier | titlecase }}
+                    </button>
+                  }
+                </hlm-dropdown-menu>
+              </ng-template>
+            } @else {
+              <div class="min-h-9 flex flex-wrap items-center gap-2">
+                @for (tier of formValue().resellerTiers ?? []; track tier) {
+                  <span hlmBadge variant="outline">{{ tier | titlecase }}</span>
+                } @empty {
+                  <span class="text-base font-medium">Tutte le tipologie</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- File -->
+      @if (!isLink() && material()) {
+        <div hlmTabsContent="file" class="flex flex-col gap-6 animate-rk-rise">
+          <div class="flex flex-col gap-1">
+            <h2 hlmCardTitle class="text-lg font-semibold">File</h2>
+          </div>
+          <ng-content select="[materialFile]" />
+        </div>
+      }
+      @if (isEditable() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

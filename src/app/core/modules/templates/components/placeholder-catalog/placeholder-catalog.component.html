@@ -1,0 +1,102 @@
+<div class="flex flex-col gap-6 text-sm">
+  <!-- Values -->
+  <div class="flex flex-col gap-2">
+    <h4 class="font-medium">Valori</h4>
+    <p class="text-xs text-muted-foreground">Clicca un segnaposto per copiarlo. Rocket scrive al suo posto il valore dell'ordine, qui con un esempio. Quelli in verde sono già nel template salvato.</p>
+    <ul class="flex flex-col gap-1">
+      @for (placeholder of textPlaceholders(); track placeholder.key) {
+        <li>
+          <button type="button" class="w-full text-left rounded-md px-2 py-1.5 hover:bg-accent cursor-pointer flex flex-col gap-0.5" (click)="copy(tag(placeholder.key))">
+            <span class="flex items-center gap-2" [class.text-status-success]="isUsed(placeholder.key)">
+              <code class="font-mono text-xs">{{ tag(placeholder.key) }}</code>
+              @if (isUsed(placeholder.key)) {
+                <ng-icon name="lucideCircleCheck" size="12" hlmTooltip="Usato" aria-label="Usato" />
+              }
+              <ng-icon name="lucideCopy" size="12" class="text-muted-foreground" />
+            </span>
+            <span class="text-xs text-muted-foreground">{{ placeholder.label }} · {{ placeholder.example }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+
+  <!-- Lists -->
+  @for (collection of catalog().collections; track collection.key) {
+    <div class="flex flex-col gap-2">
+      <h4 class="font-medium flex items-center gap-2">
+        <ng-icon name="lucideRepeat" size="14" />
+        {{ collection.label }}
+      </h4>
+      <button type="button" class="w-full text-left rounded-md px-2 py-1.5 hover:bg-accent cursor-pointer flex items-center gap-2" [class.text-status-success]="isUsed(collection.key)" (click)="copy(loopTags(collection))">
+        <code class="font-mono text-xs">{{ loopTags(collection) }}</code>
+        @if (isUsed(collection.key)) {
+          <ng-icon name="lucideCircleCheck" size="12" hlmTooltip="Usato" aria-label="Usato" />
+        }
+        <ng-icon name="lucideCopy" size="12" class="text-muted-foreground" />
+      </button>
+      <p class="text-xs text-muted-foreground">
+        Il blocco si ripete per ogni riga. Dentro si usano i campi della riga:
+        @if (isDocx()) {
+          i valori generali restano leggibili anche dentro il blocco.
+        } @else {
+          per un valore generale dentro il blocco serve <code class="font-mono">../</code>, es. <code class="font-mono">{{ parentExample() }}</code>.
+        }
+      </p>
+      <ul class="flex flex-col gap-1">
+        @for (field of collection.fields; track field.key) {
+          <li>
+            <button type="button" class="w-full text-left rounded-md px-2 py-1.5 hover:bg-accent cursor-pointer flex flex-col gap-0.5" (click)="copy(tag(field.key))">
+              <span class="flex items-center gap-2" [class.text-status-success]="isUsed(collection.key + '.' + field.key)">
+                <code class="font-mono text-xs">{{ tag(field.key) }}</code>
+                @if (isUsed(collection.key + '.' + field.key)) {
+                  <ng-icon name="lucideCircleCheck" size="12" hlmTooltip="Usato" aria-label="Usato" />
+                }
+                <ng-icon name="lucideCopy" size="12" class="text-muted-foreground" />
+              </span>
+              <span class="text-xs text-muted-foreground">{{ field.label }} · {{ field.example }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <!-- Pictures -->
+  @if (imagePlaceholders().length > 0) {
+    <div class="flex flex-col gap-2">
+      <h4 class="font-medium flex items-center gap-2">
+        <ng-icon name="lucideImage" size="14" />
+        Immagini
+      </h4>
+      <p class="text-xs text-muted-foreground">
+        Un'immagine non si scrive come testo. In Word inserisci un'immagine qualsiasi dove la vuoi, della dimensione giusta,
+        e nel suo testo alternativo scrivi il segnaposto: Rocket la sostituisce adattandola al riquadro.
+        Se il valore manca, l'immagine sparisce.
+      </p>
+      <ul class="flex flex-col gap-1">
+        @for (placeholder of imagePlaceholders(); track placeholder.key) {
+          <li>
+            <button type="button" class="w-full text-left rounded-md px-2 py-1.5 hover:bg-accent cursor-pointer flex flex-col gap-0.5" (click)="copy(tag(placeholder.key))">
+              <span class="flex items-center gap-2" [class.text-status-success]="isUsed(placeholder.key)">
+                <code class="font-mono text-xs">{{ tag(placeholder.key) }}</code>
+                @if (isUsed(placeholder.key)) {
+                  <ng-icon name="lucideCircleCheck" size="12" hlmTooltip="Usato" aria-label="Usato" />
+                }
+                <ng-icon name="lucideCopy" size="12" class="text-muted-foreground" />
+              </span>
+              <span class="text-xs text-muted-foreground">{{ placeholder.label }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <!-- Conditions -->
+  @if (conditionExample(); as example) {
+    <p class="text-xs text-muted-foreground">
+      Per mostrare una sezione solo quando un valore c'è: <code class="font-mono">{{ example }}</code>.
+    </p>
+  }
+</div>

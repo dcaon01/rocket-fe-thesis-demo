@@ -1,0 +1,21 @@
+<div class="flex items-center justify-between">
+  <rocket-page-size-selector />
+
+  <div class="flex items-center gap-4">
+    @if (pager().hasPrevious() || pager().hasNext()) {
+      <div class="text-sm text-muted-foreground">Pagina {{ pager().page() }}</div>
+      <div class="flex gap-2">
+        @if (pager().hasPrevious()) {
+          <button hlmBtn variant="outline" size="icon" type="button" hlmTooltip="Pagina precedente" aria-label="Pagina precedente" (click)="pager().previous()">
+            <ng-icon hlm name="lucideChevronLeft" size="sm" />
+          </button>
+        }
+        @if (pager().hasNext()) {
+          <button hlmBtn variant="outline" size="icon" type="button" hlmTooltip="Pagina successiva" aria-label="Pagina successiva" (click)="pager().next()">
+            <ng-icon hlm name="lucideChevronRight" size="sm" />
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

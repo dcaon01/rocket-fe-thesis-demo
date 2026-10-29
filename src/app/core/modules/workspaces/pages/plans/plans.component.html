@@ -1,0 +1,127 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Gestione piani" [description]="isReseller() ? 'Consulta i piani del prodotto abilitati.' : 'Gestisci i piani del prodotto, per il canale diretto e per i rivenditori.'">
+    @if (canManage()) {
+      <button
+        hlmBtn
+        size="sm"
+        (click)="goToCreatePlan()"
+      >
+        Crea piano
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="plansFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Name search -->
+      <div class="flex flex-col gap-2 min-w-64">
+        <label hlmLabel for="name">Nome</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input hlmInputGroupInput id="name" formControlName="name" placeholder="Cerca per nome" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-48">
+        <label hlmLabel for="status">Stato</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Nome</th>
+            @if (!isReseller()) {
+              <th hlmTh>Destinatario</th>
+            }
+            <th hlmTh>Tipo</th>
+            <th hlmTh>Frequenza</th>
+            <th hlmTh>Valuta</th>
+            <th hlmTh>Stato</th>
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (plan of pager.items(); track plan.id) {
+              <tr hlmTr>
+                <td hlmTd>{{ plan.name || '-' }}</td>
+                @if (!isReseller()) {
+                  <td hlmTd>{{ plan.audience | planAudience }}</td>
+                }
+                <td hlmTd>{{ plan.type | planType }}</td>
+                <td hlmTd>{{ plan.billingInterval ? (plan.billingInterval | paymentType) : '-' }}</td>
+                <td hlmTd>{{ plan.currency || '-' }}</td>
+                <td hlmTd><span hlmBadge variant="outline" rocketPlanStatus [status]="plan.status">{{ plan.status | planStatus }}</span></td>
+                <td hlmTd class="text-right flex justify-end items-center gap-1">
+                  @if (canManage() && plan.status === 'DRAFT') {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina piano" aria-label="Elimina piano" (click)="openDeletePlanDialog(plan.id)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  }
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="canManage() ? 'Modifica piano' : 'Apri piano'" [attr.aria-label]="canManage() ? 'Modifica piano' : 'Apri piano'" (click)="goToEditPlan(plan.id)"><ng-icon [name]="canManage() ? 'lucidePencil' : 'lucideEye'" size="16" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun piano trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>
+
+<!-- Delete dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare piano?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare il piano <strong>{{ selectedPlan?.name }}</strong>?<br>
+        Tutti gli elementi associati <strong>verranno eliminati.</strong><br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <div class="grid gap-4 mt-4">
+      <div class="grid gap-3">
+        <form [formGroup]="deleteForm">
+          <hlm-hint class="text-left">Per confermare, digita il nome del piano.</hlm-hint>
+          <input hlmInput id="name" formControlName="name" autocomplete="off" />
+        </form>
+      </div>
+    </div>
+    <hlm-error>
+      {{ errorMessage() }}
+    </hlm-error>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeletePlanDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deletePlan()" [disabled]="deleteForm.invalid || isLoading()">{{ isLoading() ? 'Caricamento...' : 'Conferma' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

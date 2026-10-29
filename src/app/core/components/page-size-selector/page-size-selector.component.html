@@ -1,0 +1,13 @@
+<div class="flex items-center gap-2">
+  <span class="text-sm text-muted-foreground">Per pagina</span>
+  <brn-select class="inline-block w-20" [ngModel]="pageSize()" (valueChange)="onChange($event)">
+    <hlm-select-trigger class="w-20">
+      <hlm-select-value />
+    </hlm-select-trigger>
+    <hlm-select-content>
+      @for (size of pageSizeOptions; track size) {
+        <hlm-option [value]="size">{{ size }}</hlm-option>
+      }
+    </hlm-select-content>
+  </brn-select>
+</div>

@@ -1,0 +1,32 @@
+# Manual-only workflow to build and deploy directly to production.
+# Triggered exclusively via workflow_dispatch (GitHub Actions UI).
+name: ralph
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-north-1
+
+# Permissions for OIDC auth, checkout, and reusable workflows
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+
+jobs:
+  # Build the Angular app with the production configuration
+  build:
+    name: Build for Production
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: prod
+
+  # Deploy the production artifact (runs after build)
+  deploy:
+    name: Deploy to Production
+    needs: build
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: prod
+      artifact-name: ${{ needs.build.outputs.artifact-name }}

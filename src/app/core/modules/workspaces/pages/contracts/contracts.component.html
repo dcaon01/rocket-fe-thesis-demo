@@ -1,0 +1,139 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Gestione contratti" [description]="isReseller() ? 'Consulta i contratti dei tuoi clienti.' : 'Consulta i contratti del prodotto, di ogni canale.'">
+    <button
+      hlmBtn
+      variant="outline"
+      size="sm"
+      [disabled]="refreshCooldown() > 0"
+      hlmTooltip="Aggiorna"
+      aria-label="Aggiorna"
+      (click)="refreshContracts()"
+    >
+      <ng-icon hlm name="lucideRefreshCw" size="16" />
+      @if (refreshCooldown() > 0) {
+        <span class="text-xs">{{ refreshCooldown() }}s</span>
+      }
+    </button>
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="contractsFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Search -->
+      <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+        <label hlmLabel for="search">Cerca</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input type="text" id="search" placeholder="Cerca per codice o azienda" hlmInputGroupInput formControlName="search" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Date type selector -->
+      <div class="flex flex-col gap-2 min-w-48">
+        <label hlmLabel for="dateType">Filtra per data</label>
+        <brn-select class="inline-block" placeholder="Tipo data" formControlName="dateType" class="w-full">
+          <hlm-select-trigger class="w-full">
+            <span class="flex flex-1 min-w-0 items-center gap-2">
+              <span class="flex text-muted-foreground"><ng-icon name="lucideCalendarCog" size="16" /></span>
+              <hlm-select-value />
+            </span>
+          </hlm-select-trigger>
+          <hlm-select-content>
+            <hlm-option value="startDate">Decorrenza</hlm-option>
+            <hlm-option value="renewalDate">Rinnovo</hlm-option>
+            <hlm-option value="terminationDate">Cessazione</hlm-option>
+          </hlm-select-content>
+        </brn-select>
+      </div>
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-64">
+        <label hlmLabel for="period">Periodo</label>
+        <rocket-date-range-filter buttonId="period" formControlName="period" />
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-48">
+        <label hlmLabel for="status">Stato</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Codice</th>
+            <th hlmTh>Azienda</th>
+            <th hlmTh>Postazioni</th>
+            <th hlmTh>Decorrenza</th>
+            <th hlmTh>Rinnovo</th>
+            <th hlmTh>Cessazione</th>
+            @if (canViewOwnership()) {
+              <th hlmTh>Gestito da</th>
+            }
+            <th hlmTh>Stato</th>
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (contract of pager.items(); track contract.id) {
+              <tr hlmTr>
+                <td hlmTd>{{ contract.code }}</td>
+                <td hlmTd>{{ contract.companyName }}</td>
+                <td hlmTd>{{ contract.seats }}</td>
+                <td hlmTd>{{ contract.startDate | date:'dd/MM/yyyy' }}</td>
+                <td hlmTd>
+                  @if (contract.renewalDate) {
+                    {{ contract.renewalDate | date:'dd/MM/yyyy' }}
+                  } @else {
+                    <span class="text-muted-foreground">-</span>
+                  }
+                </td>
+                <td hlmTd>
+                  @if (contract.terminationDate) {
+                    {{ contract.terminationDate | date:'dd/MM/yyyy' }}
+                  } @else {
+                    <span class="text-muted-foreground">-</span>
+                  }
+                </td>
+                @if (canViewOwnership()) {
+                  <td hlmTd><span hlmBadge variant="outline">{{ (contract.resellerPath | resellerOwner) ?? 'Keus' }}</span></td>
+                }
+                <td hlmTd><span hlmBadge variant="outline" rocketContractStatus [status]="contract.status">{{ contract.status | contractStatus }}</span></td>
+                <td hlmTd class="text-right flex justify-end items-center gap-1">
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Modifica contratto" aria-label="Modifica contratto" (click)="goToContract(contract.id)"><ng-icon name="lucidePencil" size="16" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun contratto trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>

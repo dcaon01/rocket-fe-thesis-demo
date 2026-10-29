@@ -1,0 +1,217 @@
+<div class="w-full flex flex-col gap-8">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="template()?.name ?? 'Template'" description="Scrivi il contenuto del template e pubblicalo quando è pronto.">
+    <!-- Options menu -->
+    @if (hasMenuActions()) {
+      <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+        <ng-icon name="lucideEllipsisVertical" size="18" />
+      </button>
+    }
+    <ng-template #actionsMenu>
+      <hlm-dropdown-menu>
+        @if (isEditable() && changed()) {
+          <button hlmDropdownMenuItem (click)="askPublish()" disabled>
+            <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+            <span>{{ changed() ? 'Salva prima di pubblicare' : 'Pubblica' }}</span>
+          </button>
+        }
+        @if (canWithdraw()) {
+          <button hlmDropdownMenuItem (click)="askWithdraw()">
+            <ng-icon name="lucideEyeOff" class="mr-2 h-4 w-4" />
+            <span>Ritira</span>
+          </button>
+        }
+        @if (canManage()) {
+          <button hlmDropdownMenuItem (click)="duplicateTemplate()">
+            <ng-icon name="lucideCopy" class="mr-2 h-4 w-4" />
+            <span>Duplica in una bozza</span>
+          </button>
+        }
+        @if (isHtml()) {
+          <button hlmDropdownMenuItem (click)="downloadHtml()">
+            <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+            <span>Scarica HTML</span>
+          </button>
+          @if (isEditable()) {
+            <button hlmDropdownMenuItem (click)="htmlInput.click()">
+              <ng-icon name="lucideUpload" class="mr-2 h-4 w-4" />
+              <span>Carica HTML</span>
+            </button>
+          }
+        } @else if (template()?.sourceS3Key) {
+          <button hlmDropdownMenuItem (click)="downloadSource()">
+            <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+            <span>Scarica il file Word</span>
+          </button>
+        }
+      </hlm-dropdown-menu>
+    </ng-template>
+
+    <!-- Primary button: the changes to save, otherwise the publication of the draft -->
+    @if (isEditable() && changed()) {
+      <span class="inline-flex" [hlmTooltip]="templateForm.invalid ? 'Completa i campi obbligatori' : ''">
+        <button hlmBtn (click)="saveTemplate()" [disabled]="templateForm.invalid || isLoading()">Salva</button>
+      </span>
+    } @else if (isEditable()) {
+      <span class="flex" hlmTooltip="Usa almeno un segnaposto" [tooltipDisabled]="usesPlaceholders()">
+        <button hlmBtn (click)="askPublish()" [disabled]="isLoading() || !usesPlaceholders()">
+          <ng-icon name="lucideSend" size="16" />
+          Pubblica
+        </button>
+      </span>
+    }
+  </rocket-page-header>
+
+  <input #htmlInput type="file" class="hidden" accept=".html,.htm,text/html" (change)="onHtmlChosen($event)" />
+
+  @if (template(); as current) {
+    <!-- Summary -->
+    <div class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+      <span hlmBadge variant="outline" rocketTemplateStatus [status]="current.status">{{ current.status | templateStatus }}</span>
+      <span>{{ current.type | templateType }}</span>
+      @if (current.channel) {
+        <span>· {{ current.channel | salesChannel }}</span>
+      }
+      <span>· {{ current.format }}</span>
+    </div>
+
+    <!-- Validation errors -->
+    @if (validationError(); as problem) {
+      <div class="rounded-md border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm flex flex-col gap-2">
+        <p class="font-medium">Il template è stato rifiutato.</p>
+        @if (problem.unknown?.length) {
+          <p>Segnaposto che non esistono per questo template: <code class="font-mono">{{ problem.unknown!.join(', ') }}</code></p>
+        }
+        @if (problem.asText?.length) {
+          <p>Immagini scritte come testo, da mettere nel testo alternativo di un'immagine: <code class="font-mono">{{ problem.asText!.join(', ') }}</code></p>
+        }
+        @if (problem.asImage?.length) {
+          <p>Valori di testo messi su un'immagine: <code class="font-mono">{{ problem.asImage!.join(', ') }}</code></p>
+        }
+        @if (problem.errors?.length) {
+          <ul class="list-disc pl-5">
+            @for (item of problem.errors; track $index) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+        }
+        @if (!problem.unknown?.length && !problem.asText?.length && !problem.asImage?.length && !problem.errors?.length) {
+          <p class="font-mono text-xs">{{ problem.message }}</p>
+        }
+      </div>
+    }
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+      <!-- Content -->
+      <form [formGroup]="templateForm" class="flex flex-col gap-6 min-w-0">
+        <!-- Name -->
+        <div class="flex flex-col gap-2">
+          <label hlmLabel for="name">Nome*</label>
+          <input hlmInput id="name" formControlName="name" autocomplete="off" />
+        </div>
+
+        @if (isHtml()) {
+          <!-- Body -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="body">Corpo HTML*</label>
+            <hlm-tabs [tab]="bodyView()" (tabActivated)="bodyView.set($event)" class="w-full">
+              <hlm-tabs-list>
+                <button hlmTabsTrigger="code">Codice</button>
+                <button hlmTabsTrigger="preview" [disabled]="!catalog()">Anteprima</button>
+              </hlm-tabs-list>
+
+              <!-- Code -->
+              <div hlmTabsContent="code">
+                <textarea
+                  hlmTextarea
+                  id="body"
+                  formControlName="body"
+                  spellcheck="false"
+                  class="font-mono text-xs min-h-[60vh] w-full transition-colors"
+                  placeholder="Scrivi qui l'HTML del documento, trascina qui il file oppure caricalo dal menu."
+                  rocketFileDropZone
+                  [fileDropDisabled]="!isEditable()"
+                  (filesDropped)="onHtmlSelected($event[0])"
+                ></textarea>
+              </div>
+
+              <!-- Preview, filled with the sample values -->
+              <div hlmTabsContent="preview">
+                @if (htmlPreview(); as preview) {
+                  @if ('html' in preview) {
+                    <iframe
+                      title="Anteprima del template"
+                      sandbox="allow-same-origin"
+                      [srcdoc]="preview.html"
+                      (load)="fitPreview($event)"
+                      scrolling="no"
+                      class="w-full min-h-[60vh] rounded-md border border-border bg-white"
+                    ></iframe>
+                  } @else {
+                    <p class="rounded-md border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm">
+                      Il template non si compila: <span class="font-mono text-xs">{{ preview.error }}</span>
+                    </p>
+                  }
+                }
+              </div>
+            </hlm-tabs>
+          </div>
+        } @else {
+          <!-- DOCX source -->
+          <div
+            class="flex flex-col gap-3 rounded-md border border-border px-4 py-4 transition-colors"
+            [class.border-dashed]="isEditable()"
+            rocketFileDropZone
+            [fileDropDisabled]="!isEditable() || isLoading()"
+            (filesDropped)="onSourceSelected($event[0])"
+          >
+            <div class="flex items-center justify-between gap-4">
+              <span hlmLabel>File Word</span>
+              <button hlmBtn variant="ghost" size="sm" type="button" (click)="previewDocx()" [disabled]="!catalog() || !current.sourceS3Key">
+                <ng-icon hlm name="lucideEye" size="16" />
+                Anteprima
+              </button>
+            </div>
+            @if (current.sourceS3Key) {
+              <p class="text-sm">File caricato.</p>
+            } @else {
+              <p class="text-sm text-muted-foreground">{{ isEditable() ? 'Trascina qui il file Word oppure sceglilo.' : 'Nessun file caricato.' }}</p>
+            }
+            @if (isEditable()) {
+              <div>
+                <button hlmBtn variant="outline" size="sm" type="button" (click)="sourceInput.click()" [disabled]="isLoading()">
+                  {{ current.sourceS3Key ? 'Sostituisci il file' : 'Scegli il file' }}
+                  <ng-icon hlm name="lucideFileUp" size="16" />
+                </button>
+                <input #sourceInput type="file" class="hidden" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" (change)="onSourceChosen($event)" />
+              </div>
+            }
+          </div>
+        }
+      </form>
+
+      <!-- Placeholder catalog -->
+      <aside class="rounded-md border border-border px-4 py-4 lg:sticky lg:top-4 lg:max-h-[80vh] overflow-y-auto">
+        @if (catalog(); as currentCatalog) {
+          <rocket-placeholder-catalog [catalog]="currentCatalog" [used]="current.placeholders" />
+        } @else {
+          <p class="text-sm text-muted-foreground">Caricamento del catalogo…</p>
+        }
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- Confirm dialog -->
+<hlm-dialog #confirmDialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ pendingAction()?.title }}</h3>
+      <p hlmDialogDescription>{{ pendingAction()?.description }}</p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" (click)="closeConfirmDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn (click)="confirmPendingAction()" [disabled]="isLoading()">{{ isLoading() ? 'Caricamento...' : pendingAction()?.confirmLabel }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

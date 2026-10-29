@@ -1,0 +1,118 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Filters: a div, since the section already sits inside the company form -->
+  <div [formGroup]="contractsFilterForm" class="w-full flex gap-4 flex-wrap">
+    <!-- Search -->
+    <div class="flex flex-col gap-2 flex-1 min-w-56 max-w-72">
+      <label hlmLabel for="contractSearch">Cerca</label>
+      <hlm-input-group>
+        <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+        <input type="text" id="contractSearch" placeholder="Codice del contratto" hlmInputGroupInput formControlName="search" autocomplete="off" (keydown.enter)="$event.preventDefault(); applyFilters()" />
+      </hlm-input-group>
+    </div>
+
+    <!-- Product -->
+    <div class="flex flex-col gap-2 min-w-56">
+      <label hlmLabel for="contractProductId">Prodotto</label>
+      <hlm-combobox formControlName="productId" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+        <hlm-combobox-input placeholder="Cerca un prodotto" />
+        <ng-template hlmComboboxPortal>
+          <hlm-combobox-content>
+            <div hlmComboboxList>
+              @for (product of products(); track product.id) {
+                <hlm-combobox-item [value]="product.id" class="cursor-pointer">{{ product.name }}</hlm-combobox-item>
+              }
+              <div hlmComboboxEmpty [class.flex!]="products().length === 0">Nessun prodotto trovato</div>
+            </div>
+          </hlm-combobox-content>
+        </ng-template>
+      </hlm-combobox>
+    </div>
+
+    <!-- Status -->
+    <div class="flex flex-col gap-2 min-w-44">
+      <label hlmLabel for="contractStatus">Stato</label>
+      <rocket-multi-select-filter buttonId="contractStatus" formControlName="status" [options]="statusOptions" />
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 items-end">
+      <button hlmBtn variant="outline" type="button" [disabled]="!canApply()" (click)="applyFilters()">Filtra</button>
+      @if (isFiltered()) {
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr class="bg-background hover:bg-background">
+          <th hlmTh>Codice</th>
+          <th hlmTh>Prodotto</th>
+          <th hlmTh>Postazioni</th>
+          <th hlmTh>Decorrenza</th>
+          <th hlmTh>Rinnovo</th>
+          <th hlmTh>Cessazione</th>
+          <th hlmTh>Stato</th>
+          <th hlmTh></th>
+        </tr>
+      </thead>
+      @if (contracts().length > 0) {
+        <tbody hlmTBody>
+          @for (contract of contracts(); track contract.id) {
+            <tr hlmTr>
+              <td hlmTd>{{ contract.code }}</td>
+              <td hlmTd>{{ productOf(contract) }}</td>
+              <td hlmTd>{{ contract.seats }}</td>
+              <td hlmTd>{{ contract.startDate | date:'dd/MM/yyyy' }}</td>
+              <td hlmTd>
+                @if (contract.renewalDate) {
+                  {{ contract.renewalDate | date:'dd/MM/yyyy' }}
+                } @else {
+                  <span class="text-muted-foreground">-</span>
+                }
+              </td>
+              <td hlmTd>
+                @if (contract.terminationDate) {
+                  {{ contract.terminationDate | date:'dd/MM/yyyy' }}
+                } @else {
+                  <span class="text-muted-foreground">-</span>
+                }
+              </td>
+              <td hlmTd><span hlmBadge variant="outline" rocketContractStatus [status]="contract.status">{{ contract.status | contractStatus }}</span></td>
+              <td hlmTd class="text-right flex justify-end items-center gap-1">
+                @if (isCancellable(contract)) {
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Registra disdetta" aria-label="Registra disdetta" (click)="openCancelDialog(contract)"><ng-icon name="lucideSquareArrowOutUpRight" size="16" /></button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      } @else {
+        <caption hlmCaption>
+          <hlm-empty>
+            <hlm-empty-header>
+              <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+              <p hlmEmptyDescription>Nessun contratto trovato.</p>
+            </hlm-empty-header>
+          </hlm-empty>
+        </caption>
+      }
+    </table>
+  </div>
+</div>
+
+<!-- Cancel dialog -->
+<hlm-dialog #dialog class="hidden">
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Registrare la disdetta?</h3>
+      <p hlmDialogDescription>Il contratto <strong>{{ selectedContract()?.code }}</strong> resta attivo e fatturato fino al rinnovo, poi cessa. Dentro il preavviso il rinnovo imminente avviene comunque e il contratto cessa a quello successivo.</p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" type="button" (click)="closeCancelDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn type="button" (click)="cancelContract()" [disabled]="isLoading()">{{ isLoading() ? 'Caricamento...' : 'Registra disdetta' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

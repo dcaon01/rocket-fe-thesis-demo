@@ -1,0 +1,42 @@
+<div
+  hlmItem
+  [variant]="canUpload() ? 'outline' : 'default'"
+  class="rounded-xl bg-card transition-colors"
+  [class.border-dashed]="canUpload()"
+  [class.p-0]="!canUpload()"
+  rocketFileDropZone
+  [fileDropDisabled]="!canUpload() || isUploading()"
+  (filesDropped)="onLogoSelected($event[0])"
+>
+  <div hlmItemMedia>
+    <hlm-avatar class="size-20 border">
+      @if (logoUrl()) {
+        <img [src]="logoUrl()" alt="Logo del rivenditore" hlmAvatarImage class="object-contain p-2 bg-background" />
+      }
+      <span class="bg-muted text-muted-foreground" hlmAvatarFallback><ng-icon name="lucideImage" size="24" /></span>
+    </hlm-avatar>
+  </div>
+
+  <div hlmItemContent>
+    <div hlmItemTitle>Logo</div>
+    <p hlmItemDescription>Compare sulle offerte del canale indiretto. {{ canUpload() ? 'Trascinalo qui oppure sceglilo. ' : '' }}PNG o JPEG, fino a 5 MB.</p>
+    @if (logoError()) {
+      <p class="text-destructive text-xs mt-1">{{ logoError() }}</p>
+    }
+  </div>
+
+  @if (canUpload()) {
+    <div hlmItemActions>
+      <button hlmBtn variant="outline" size="sm" type="button" [disabled]="isUploading()" (click)="logoInput.click()">
+        @if (isUploading()) {
+          <ng-icon name="lucideLoader" size="16" class="animate-spin" />
+          Caricamento…
+        } @else {
+          <ng-icon name="lucideImagePlus" size="16" />
+          {{ logoUrl() ? 'Sostituisci' : 'Carica' }}
+        }
+      </button>
+      <input #logoInput type="file" class="hidden" accept="image/png,image/jpeg" (change)="onLogoChosen($event)" />
+    </div>
+  }
+</div>

@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-4">
+  @for (account of accounts(); track account.productId) {
+    <div hlmItem class="p-0">
+      <div hlmItemContent>
+        <div hlmItemTitle>{{ account.name }}</div>
+        @if (account.link?.mandateAt) {
+          <p hlmItemDescription>Mandato SEPA attivo dal {{ account.link?.mandateAt | date:'dd/MM/yyyy' }}</p>
+        } @else {
+          <p hlmItemDescription class="text-muted-foreground">Nessun mandato</p>
+        }
+      </div>
+
+      @if (canCollect() && !account.link?.mandateAt) {
+        <div hlmItemActions>
+          @if (hasValidCheckout(account.link)) {
+            <button hlmBtn variant="outline" size="sm" type="button" (click)="copyCheckoutLink(account.link!)">
+              <ng-icon name="lucideCopy" size="16" />
+              Copia link pagamento
+            </button>
+            <button hlmBtn variant="outline" size="sm" type="button" (click)="openCheckoutLink(account.link!)">
+              <ng-icon name="lucideExternalLink" size="16" />
+              Compila in autonomia
+            </button>
+          } @else {
+            <button hlmBtn variant="outline" size="sm" type="button" (click)="generateCheckout(account.productId)">
+              <ng-icon name="lucideLink" size="16" />
+              {{ account.link?.checkoutSessionUrl ? 'Rigenera link pagamento' : 'Genera link pagamento' }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  } @empty {
+    <p class="text-sm text-muted-foreground">Il contratto non abilita nessun prodotto.</p>
+  }
+</div>

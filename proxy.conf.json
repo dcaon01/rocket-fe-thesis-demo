@@ -1,0 +1,18 @@
+[
+  {
+    "context": [
+      "/rocket-cognito/**"
+    ],
+    "target": "http://localhost:3154",
+    "secure": false,
+    "logLevel": "debug"
+  },
+  {
+    "context": [
+      "/rocket-core/**"
+    ],
+    "target": "http://localhost:3155",
+    "secure": false,
+    "logLevel": "debug"
+  }
+]

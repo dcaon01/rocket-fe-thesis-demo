@@ -1,0 +1,13 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Nuovo ordine" [description]="isReseller() ? 'Crea un ordine per un cliente, con una riga per prodotto. Keus approva l\'offerta prima dell\'invio.' : 'Crea un ordine per un\'azienda, con una riga per prodotto. Nasce in bozza.'">
+    <rocket-form-toolbar [steps]="form.steps">
+      <span class="inline-flex" [hlmTooltip]="form.orderForm.invalid ? 'Completa i campi obbligatori' : !form.steps.allVisited() ? 'Apri prima tutte le sezioni' : ''">
+        <button hlmBtn [disabled]="form.orderForm.invalid || !form.steps.allVisited()" (click)="createOrder()">Conferma</button>
+      </span>
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <!-- Order form -->
+  <rocket-order-form class="flex-1 min-h-0 flex flex-col" #form [creating]="true" />
+</div>

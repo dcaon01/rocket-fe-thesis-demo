@@ -1,0 +1,17 @@
+<main class="min-h-svh bg-sidebar w-full flex items-center justify-center px-6 text-foreground">
+  <div hlmCard class="relative w-full max-w-md p-10 gap-6 items-center text-center">
+    <div hlmEmptyMedia variant="icon" class="rk-icon-tile size-20 rounded-lg">
+      <ng-icon name="lucideCheckLine" size="38" />
+    </div>
+    <div class="flex flex-col items-center gap-2">
+      <h1 hlmCardTitle class="text-2xl md:text-3xl font-semibold tracking-tight">Mandato registrato</h1>
+      <p hlmCardDescription class="text-base">
+        Il mandato SEPA è stato registrato. Grazie per averci scelto!
+      </p>
+    </div>
+    <!-- Back to the activation of the reseller, only for a reseller session: its guard opens Rocket once nothing is left to do -->
+    @if (isReseller()) {
+      <a hlmBtn class="w-full" routerLink="/access-blocked">Torna a Rocket</a>
+    }
+  </div>
+</main>

@@ -1,0 +1,9 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Prodotti abilitati" [description]="isReseller() ? 'Apri il workspace dei prodotti che puoi vendere.' : 'Apri il workspace dei prodotti che il rivenditore può vendere.'" />
+
+  <!-- Products -->
+  @if (reseller(); as current) {
+    <rocket-reseller-products [productIds]="current.productIds" />
+  }
+</div>

@@ -1,0 +1,86 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Filters: a div, since the section already sits inside the company form -->
+  <div [formGroup]="usersFilterForm" class="w-full flex gap-4 flex-wrap">
+    <!-- Search -->
+    <div class="flex flex-col gap-2 flex-1 min-w-56 max-w-72">
+      <label hlmLabel for="userSearch">Cerca</label>
+      <hlm-input-group>
+        <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+        <input type="text" id="userSearch" placeholder="Nome, cognome o email" hlmInputGroupInput formControlName="search" autocomplete="off" (keydown.enter)="$event.preventDefault(); applyFilters()" />
+      </hlm-input-group>
+    </div>
+
+    <!-- Product -->
+    <div class="flex flex-col gap-2 min-w-56">
+      <label hlmLabel for="userProductId">Prodotto</label>
+      <hlm-combobox formControlName="productId" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+        <hlm-combobox-input placeholder="Cerca un prodotto" />
+        <ng-template hlmComboboxPortal>
+          <hlm-combobox-content>
+            <div hlmComboboxList>
+              @for (product of products(); track product.id) {
+                <hlm-combobox-item [value]="product.id" class="cursor-pointer">{{ product.name }}</hlm-combobox-item>
+              }
+              <div hlmComboboxEmpty [class.flex!]="products().length === 0">Nessun prodotto trovato</div>
+            </div>
+          </hlm-combobox-content>
+        </ng-template>
+      </hlm-combobox>
+    </div>
+
+    <!-- Status -->
+    <div class="flex flex-col gap-2 min-w-44">
+      <label hlmLabel for="userStatus">Stato</label>
+      <rocket-multi-select-filter buttonId="userStatus" formControlName="status" [options]="statusOptions" />
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 items-end">
+      <button hlmBtn variant="outline" type="button" [disabled]="!canApply()" (click)="applyFilters()">Filtra</button>
+      @if (isFiltered()) {
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr class="bg-background hover:bg-background">
+          <th hlmTh>Nome</th>
+          <th hlmTh>Email</th>
+          <th hlmTh>Prodotto</th>
+          <th hlmTh>Tenant</th>
+          <th hlmTh>Stato</th>
+          <th hlmTh></th>
+        </tr>
+      </thead>
+      @if (users().length > 0) {
+        <tbody hlmTBody>
+          @for (user of users(); track user.productId + user.id) {
+            <tr hlmTr>
+              <td hlmTd>{{ user.name }} {{ user.surname }}</td>
+              <td hlmTd>{{ user.email }}</td>
+              <td hlmTd>{{ productOf(user) }}</td>
+              <td hlmTd>{{ user.tenantName }}</td>
+              <td hlmTd><span hlmBadge variant="outline" rocketUserStatus [status]="user.status">{{ user.status | userStatus }}</span></td>
+              <td hlmTd class="text-right flex justify-end items-center gap-1">
+                <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="canManage() ? 'Modifica utente' : 'Apri utente'" [attr.aria-label]="canManage() ? 'Modifica utente' : 'Apri utente'" (click)="goToUser(user)"><ng-icon [name]="canManage() ? 'lucidePencil' : 'lucideEye'" size="16" /></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      } @else {
+        <caption hlmCaption>
+          <hlm-empty>
+            <hlm-empty-header>
+              <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+              <p hlmEmptyDescription>Nessun utente trovato.</p>
+            </hlm-empty-header>
+          </hlm-empty>
+        </caption>
+      }
+    </table>
+  </div>
+</div>

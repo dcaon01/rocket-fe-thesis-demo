@@ -1,0 +1,13 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Crea rivenditore" description="Inserisci dati societari e tipologia del nuovo rivenditore.">
+    <rocket-form-toolbar [steps]="form.steps">
+      <span class="inline-flex" [hlmTooltip]="form?.resellerForm?.invalid ? 'Completa i campi obbligatori' : !form.steps.allVisited() ? 'Apri prima tutte le sezioni' : ''">
+        <button hlmBtn [disabled]="form?.resellerForm?.invalid || !form.steps.allVisited()" (click)="createReseller(form.resellerForm)">Conferma</button>
+      </span>
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <!-- Reseller form for creating a new reseller -->
+  <rocket-reseller-form class="flex-1 min-h-0 flex flex-col" #form [creating]="true"/>
+</div>

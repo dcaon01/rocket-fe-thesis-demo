@@ -1,0 +1,308 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  @if (headerTitle()) {
+    <rocket-page-header [headerTitle]="headerTitle()" [description]="description()">
+      <button hlmBtn variant="outline" size="sm" hlmTooltip="Aggiorna" aria-label="Aggiorna" (click)="loadInvoices()">
+        <ng-icon hlm name="lucideRefreshCw" size="16" />
+      </button>
+    </rocket-page-header>
+  }
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="invoicesFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Search -->
+      <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+        <label hlmLabel for="search">Cerca</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input type="text" id="search" placeholder="Numero, ragione sociale o partita IVA" hlmInputGroupInput formControlName="search" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="status">Incasso</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions()" />
+      </div>
+
+      <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+      @if (integrationsEnabled) {
+        <!-- Electronic invoice -->
+        <div class="flex flex-col gap-2 min-w-44">
+          <label hlmLabel for="document">Fattura elettronica</label>
+          <rocket-multi-select-filter buttonId="document" formControlName="document" [options]="documentOptions" />
+        </div>
+      }
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-56">
+        <label hlmLabel for="period">{{ isSchedule() ? 'Scadenza' : 'Registrate' }}</label>
+        <rocket-date-range-filter buttonId="period" formControlName="period" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+
+      <!-- End of the row, such as the view tabs of the payment schedule -->
+      <ng-content select="[filtersEnd]" />
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            @if (isSchedule()) {
+              <th hlmTh>Scadenza</th>
+            }
+            <th hlmTh>Numero</th>
+            <th hlmTh>Registrata il</th>
+            <th hlmTh>Cliente</th>
+            <th hlmTh class="text-right">Totale</th>
+            <th hlmTh>Incasso</th>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              <th hlmTh>Fattura elettronica</th>
+            }
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (entry of pager.items(); track entry.key) {
+              @if (entry.invoice; as invoice) {
+                <tr hlmTr>
+                  @if (isSchedule()) {
+                    <td hlmTd>
+                      @if (invoice.dueDate) {
+                        <div class="flex flex-col">
+                          <span>{{ invoice.dueDate | date:'dd/MM/yyyy' }}</span>
+                          @switch (dueState(invoice)) {
+                            @case ('overdue') {
+                              <span class="text-xs text-destructive">Scaduta</span>
+                            }
+                            @case ('dueSoon') {
+                              <span class="text-xs text-muted-foreground">Entro 7 giorni</span>
+                            }
+                          }
+                        </div>
+                      } @else {
+                        <span class="text-muted-foreground">-</span>
+                      }
+                    </td>
+                  }
+                  <td hlmTd class="font-medium">
+                    <div class="flex items-center gap-2">
+                      @if (invoice.number) {
+                        <span>{{ invoice.number }}</span>
+                      } @else {
+                        <span class="font-normal text-muted-foreground">-</span>
+                      }
+                      @if (invoice.prorationId) {
+                        <span hlmBadge variant="outline">Rateo</span>
+                      }
+                    </div>
+                  </td>
+                  <td hlmTd>{{ invoice.issuedAt | date:'dd/MM/yyyy' }}</td>
+                  <td hlmTd>
+                    <div class="flex flex-col">
+                      <span>{{ invoice.billedParty.name }}</span>
+                      <span class="text-xs text-muted-foreground">
+                        {{ partyLabel(invoice.billedPartyType) }}{{ invoice.billedParty.vatNumber ? ' · ' + invoice.billedParty.vatNumber : '' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td hlmTd class="text-right">
+                    <div class="flex flex-col">
+                      <span>{{ invoice.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                      <span class="text-xs text-muted-foreground">imponibile {{ invoice.taxableCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                    </div>
+                  </td>
+                  <td hlmTd>
+                    <div class="flex flex-col items-start gap-1">
+                      <span hlmBadge variant="outline" rocketInvoiceStatus [status]="invoice.status">{{ invoice.status | invoiceStatus }}</span>
+                      @if (invoice.status === unpaid) {
+                        <span class="text-xs text-muted-foreground">
+                          {{ invoice.failedAttempts ?? 0 }} {{ invoice.failedAttempts === 1 ? 'tentativo fallito' : 'tentativi falliti' }} · {{ invoice.dunningStep | dunningStep }}
+                        </span>
+                      }
+                    </div>
+                  </td>
+                  <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+                  @if (integrationsEnabled) {
+                    <td hlmTd>
+                      @if (invoice.documentStatus) {
+                        <!-- The error of the electronic invoice sits in the tooltip of the badge, wrapped at a fixed width -->
+                        <span hlmBadge variant="outline" rocketElectronicInvoice [status]="invoice.documentStatus" [hlmTooltip]="invoice.documentError ? documentErrorTooltip : null" [tooltipDisabled]="!invoice.documentError">{{ invoice.documentStatus | electronicInvoice }}</span>
+                        <ng-template #documentErrorTooltip>
+                          <span class="block max-w-80 text-left">{{ invoice.documentError }}</span>
+                        </ng-template>
+                      } @else {
+                        <span class="text-muted-foreground">-</span>
+                      }
+                    </td>
+                  }
+                  <td hlmTd class="text-right">
+                    @if (actionsFor(invoice).length > 0 || contractRoute(invoice) || invoice.proFormaS3Key) {
+                      <button position="left" class="hover:bg-foreground/5" hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="invoiceMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+                        <ng-icon name="lucideEllipsisVertical" size="16" />
+                      </button>
+                      <ng-template #invoiceMenu>
+                        <hlm-dropdown-menu>
+                          @if (contractRoute(invoice); as route) {
+                            <a hlmDropdownMenuItem [routerLink]="route">
+                              <ng-icon name="lucideFileText" class="mr-2 h-4 w-4" />
+                              <span>Apri il contratto</span>
+                            </a>
+                          }
+                          @if (invoice.proFormaS3Key) {
+                            <button hlmDropdownMenuItem (click)="downloadProForma(invoice)">
+                              <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+                              <span>Scarica la pro forma</span>
+                            </button>
+                          }
+                          @for (action of actionsFor(invoice); track action) {
+                            <button hlmDropdownMenuItem (click)="openAction(action, invoice)">
+                              @switch (action) {
+                                @case ('paid') {
+                                  <ng-icon name="lucideCircleCheck" class="mr-2 h-4 w-4" />
+                                  <span>Segna pagata</span>
+                                }
+                                @case ('reissue') {
+                                  <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+                                  <span>Ricrea la bozza</span>
+                                }
+                                @case ('link') {
+                                  <ng-icon name="lucideLink" class="mr-2 h-4 w-4" />
+                                  <span>Collega il documento di Sibill</span>
+                                }
+                                @case ('reissueVerified') {
+                                  <ng-icon name="lucideSend" class="mr-2 h-4 w-4 text-destructive" />
+                                  <span class="text-destructive">Ricrea la bozza, verificato su Sibill</span>
+                                }
+                              }
+                            </button>
+                          }
+                        </hlm-dropdown-menu>
+                      </ng-template>
+                    }
+                  </td>
+                </tr>
+              } @else if (entry.expected; as expected) {
+                <!-- Expected payment -->
+                <tr hlmTr>
+                  <td hlmTd>{{ entry.dueDate | date:'dd/MM/yyyy' }}</td>
+                  <td hlmTd><span class="text-muted-foreground">-</span></td>
+                  <td hlmTd><span class="text-muted-foreground">-</span></td>
+                  <td hlmTd>
+                    <div class="flex flex-col">
+                      <span>{{ expected.billedPartyName }}</span>
+                      <span class="text-xs text-muted-foreground">{{ partyLabel(expected.billedPartyType) }} · {{ expected.description }}</span>
+                    </div>
+                  </td>
+                  <td hlmTd class="text-right">
+                    <div class="flex flex-col">
+                      <span>{{ expected.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                      <span class="text-xs text-muted-foreground">imponibile {{ expected.taxableCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                    </div>
+                  </td>
+                  <td hlmTd>
+                    <span hlmBadge variant="outline" rocketInvoiceStatus [status]="expectedStatus">{{ expectedStatus | invoiceStatus }}</span>
+                  </td>
+                  <td hlmTd><span class="text-muted-foreground">-</span></td>
+                  <td hlmTd class="text-right">
+                    @if (expectedRoute(expected); as route) {
+                      <button position="left" class="hover:bg-foreground/5" hlmBtn variant="ghost" size="icon-sm" [hlmDropdownMenuTrigger]="expectedMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+                        <ng-icon name="lucideEllipsisVertical" size="16" />
+                      </button>
+                      <ng-template #expectedMenu>
+                        <hlm-dropdown-menu>
+                          <a hlmDropdownMenuItem [routerLink]="route">
+                            <ng-icon name="lucideFileText" class="mr-2 h-4 w-4" />
+                            <span>Apri il contratto</span>
+                          </a>
+                        </hlm-dropdown-menu>
+                      </ng-template>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>{{ isSchedule() ? 'Nessuna scadenza trovata.' : 'Nessuna fattura trovata.' }}</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+
+  <!-- Action dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap -->
+  <hlm-dialog #actionDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      @if (pendingAction(); as pending) {
+        <hlm-dialog-header>
+          @switch (pending.action) {
+            @case ('paid') {
+              <h3 hlmDialogTitle>Segnare la fattura come pagata?</h3>
+              <p hlmDialogDescription>Registra l'incasso arrivato fuori da Stripe, come il bonifico della finanziaria, per {{ pending.invoice.billedParty.name }}.<!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->@if (integrationsEnabled) { Se la fattura va su Sibill, Rocket ne crea la bozza.}</p>
+            }
+            @case ('reissue') {
+              <h3 hlmDialogTitle>Ricreare la bozza su Sibill?</h3>
+              <p hlmDialogDescription>Sibill l'aveva rifiutata: Rocket la crea di nuovo con i dati di adesso. Correggi prima quello che dice il motivo.</p>
+            }
+            @case ('link') {
+              <h3 hlmDialogTitle>Collegare il documento di Sibill</h3>
+              <p hlmDialogDescription>Se su Sibill la fattura c'è, incolla l'identificativo del documento: Rocket ne legge numero e stato.</p>
+            }
+            @case ('reissueVerified') {
+              <h3 hlmDialogTitle>Ricreare una bozza da verificare?</h3>
+              <p hlmDialogDescription>Fallo solo dopo aver controllato su Sibill che il documento non esiste: altrimenti su Sibill ci sono due bozze della stessa fattura.</p>
+            }
+          }
+        </hlm-dialog-header>
+
+        @if (pending.action === 'link') {
+          <!-- Sibill document -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="sibillId">Identificativo del documento*</label>
+            <input type="text" id="sibillId" hlmInput [formControl]="sibillIdControl" placeholder="01a0fc1a-389e-7635-ae93-2fbcb4c59bea" autocomplete="off" />
+          </div>
+        }
+        @if (pending.action !== 'paid' && pending.invoice.documentError) {
+          <p class="text-sm text-muted-foreground">{{ pending.invoice.documentError }}</p>
+        }
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" (click)="closeActionDialog()" [disabled]="isLoading()">Annulla</button>
+          <button
+            hlmBtn
+            [variant]="pending.action === 'reissueVerified' ? 'destructive' : 'default'"
+            (click)="confirmAction()"
+            [disabled]="isLoading() || (pending.action === 'link' && !sibillIdControl.value?.trim())"
+          >
+            {{ isLoading() ? 'Caricamento...' : 'Conferma' }}
+          </button>
+        </hlm-dialog-footer>
+      }
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

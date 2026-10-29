@@ -1,0 +1,163 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Gestione trial" description="Gestisci le prove gratuite del prodotto.">
+    <button
+      hlmBtn
+      variant="outline"
+      size="sm"
+      [disabled]="refreshCooldown() > 0"
+      hlmTooltip="Aggiorna"
+      aria-label="Aggiorna"
+      (click)="refreshTrials()"
+    >
+      <ng-icon hlm name="lucideRefreshCw" size="16" />
+      @if (refreshCooldown() > 0) {
+        <span class="text-xs">{{ refreshCooldown() }}s</span>
+      }
+    </button>
+    @if (canManage()) {
+      <button
+        hlmBtn
+        size="sm"
+        (click)="goToCreateTrial()"
+      >
+        Crea trial
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="trialsFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Email -->
+      <div class="flex flex-col gap-2 flex-1 min-w-48 max-w-64">
+        <label hlmLabel for="email">Email</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideMail" size="16" /></hlm-input-group-addon>
+          <input type="text" id="email" placeholder="Email associata" hlmInputGroupInput formControlName="email" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Date type selector -->
+      <div class="flex flex-col gap-2 min-w-48">
+        <label hlmLabel for="dateType">Filtra per data</label>
+        <brn-select class="inline-block" placeholder="Tipo data" formControlName="dateType" class="w-full">
+          <hlm-select-trigger class="w-full">
+            <span class="flex flex-1 min-w-0 items-center gap-2">
+              <span class="flex text-muted-foreground"><ng-icon name="lucideCalendarCog" size="16" /></span>
+              <hlm-select-value />
+            </span>
+          </hlm-select-trigger>
+          <hlm-select-content>
+            <hlm-option value="activatedAt">Attivazione</hlm-option>
+            <hlm-option value="expiresAt">Scadenza</hlm-option>
+          </hlm-select-content>
+        </brn-select>
+      </div>
+
+      <!-- Period -->
+      <div class="flex flex-col gap-2 min-w-64">
+        <label hlmLabel for="period">Periodo</label>
+        <rocket-date-range-filter buttonId="period" formControlName="period" />
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-48">
+        <label hlmLabel for="status">Stato</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Email</th>
+            <th hlmTh>Attivazione</th>
+            <th hlmTh>Scadenza</th>
+            <th hlmTh>Perpetuo</th>
+            @if (canViewOwnership()) {
+              <th hlmTh>Gestito da</th>
+            }
+            <th hlmTh>Stato</th>
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (trial of pager.items(); track trial.id) {
+              <tr hlmTr>
+                <td hlmTd>{{ trial.associatedEmail }}</td>
+                <td hlmTd>{{ trial.activatedAt ? formatDate(trial.activatedAt) : '-' }}</td>
+                <td hlmTd>{{ trial.expiresAt ? formatDate(trial.expiresAt) : '-' }}</td>
+                <td hlmTd>{{ trial.perpetual ? 'Sì' : 'No' }}</td>
+                @if (canViewOwnership()) {
+                  <td hlmTd><span hlmBadge variant="outline">{{ (trial.resellerPath | resellerOwner) ?? 'Keus' }}</span></td>
+                }
+                <td hlmTd><span hlmBadge variant="outline" rocketTrialStatus [status]="trial.status">{{ trial.status | trialStatus }}</span></td>
+                <td hlmTd class="text-right flex justify-end items-center gap-1">
+                  @if (canDelete()) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina trial" aria-label="Elimina trial" (click)="openDeleteTrialDialog(trial.id)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  }
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="canManage() ? 'Modifica trial' : 'Apri trial'" [attr.aria-label]="canManage() ? 'Modifica trial' : 'Apri trial'" (click)="goToEditTrial(trial.id)"><ng-icon [name]="canManage() ? 'lucidePencil' : 'lucideEye'" size="16" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun trial trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>
+
+<!-- Delete dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare trial?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare il trial associato a <strong>{{ selectedTrial?.associatedEmail }}</strong>?<br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <div class="grid gap-4 mt-4">
+      <div class="grid gap-3">
+        <form [formGroup]="deleteForm">
+          <hlm-hint class="text-left">Per confermare, digita l'email associata al trial.</hlm-hint>
+          <input hlmInput id="email" formControlName="email" autocomplete="off" />
+        </form>
+      </div>
+    </div>
+    <hlm-error>
+      {{ errorMessage() }}
+    </hlm-error>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteTrialDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteTrial()" [disabled]="deleteForm.invalid || isLoading()">{{ isLoading() ? 'Caricamento...' : 'Conferma' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

@@ -1,0 +1,61 @@
+# Main CI/CD pipeline — orchestrates build and deploy via reusable workflows.
+name: CI/CD Pipeline
+
+# Triggers: manual dispatch or push to master
+on:
+  workflow_dispatch:
+  push:
+    # Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket.
+    branches: [main]
+
+# Permissions needed for OIDC auth, checkout, reusable workflows, and PR comments
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  # Build the Angular app for the dev environment
+  build-dev:
+    name: Build for Dev
+    uses: ./.github/workflows/build.yml
+    with:
+      environment: dev
+
+  # Deploy the dev build artifact (runs after build-dev)
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build-dev
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: dev
+      artifact-name: ${{ needs.build-dev.outputs.artifact-name }}
+
+  # (disabled) Run e2e tests on staging after deploy
+  # test-staging:
+  #   name: Test on Staging Environment
+  #   needs: deploy-staging
+  #   uses: ./.github/workflows/test.yml
+  #   with:
+  #     environment: stg
+  #     run-e2e: true
+
+  # (disabled) Build for production — only on push to master, after staging tests pass
+  # build-prod:
+  #   name: Build for Prod
+  #   needs: test-staging
+  #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  #   uses: ./.github/workflows/build.yml
+  #   with:
+  #     environment: prod
+
+  # (disabled) Deploy the production build artifact
+  # deploy-prod:
+  #   name: Deploy to Prod
+  #   needs: build-prod
+  #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  #   uses: ./.github/workflows/deploy.yml
+  #   with:
+  #     environment: prod
+  #     artifact-name: ${{ needs.build-prod.outputs.artifact-name }}

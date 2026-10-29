@@ -1,0 +1,131 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="contract()?.code ?? 'Dettaglio contratto'" description="Segui canone, sconti, mandati e fatture del contratto.">
+    @if (contract()?.status; as status) {
+      <span headerMeta hlmBadge variant="outline" rocketContractStatus [status]="status">{{ status | contractStatus }}</span>
+    }
+
+    <!-- Actions menu -->
+    @if (hasMenuActions()) {
+      <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+        <ng-icon name="lucideEllipsisVertical" size="18" />
+      </button>
+    }
+    <ng-template #actionsMenu>
+      <hlm-dropdown-menu>
+        @if (contract()?.signedContractS3Key) {
+          <button hlmDropdownMenuItem (click)="downloadAgreement()">
+            <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+            <span class="whitespace-nowrap">Scarica contratto firmato</span>
+          </button>
+        }
+        @if (canGenerate()) {
+          <button hlmDropdownMenuItem [disabled]="isGenerating()" (click)="generateContract()">
+            <ng-icon name="lucideFileText" class="mr-2 h-4 w-4" />
+            <span class="whitespace-nowrap">Genera contratto</span>
+          </button>
+        }
+        @if (canEnd() && contract()?.status === ResellerContractStatus.Active) {
+          <button hlmDropdownMenuItem (click)="openActionDialog('terminate')">
+            <ng-icon name="lucideSquareArrowOutUpRight" class="mr-2 h-4 w-4" />
+            <span>Termina al rinnovo</span>
+          </button>
+        }
+        @if (canEnd() && contract()?.status === ResellerContractStatus.EndedAtRenewal) {
+          <button hlmDropdownMenuItem (click)="openActionDialog('reactivate')">
+            <ng-icon name="lucideRotateCcw" class="mr-2 h-4 w-4" />
+            <span>Riattiva</span>
+          </button>
+        }
+        @if (canEnd() && (contract()?.status === ResellerContractStatus.Active || contract()?.status === ResellerContractStatus.EndedAtRenewal)) {
+          <button hlmDropdownMenuItem (click)="openActionDialog('end')">
+            <ng-icon name="lucideCircleStop" class="mr-2 h-4 w-4" />
+            <span>Cessa ora</span>
+          </button>
+        }
+      </hlm-dropdown-menu>
+    </ng-template>
+
+    <!-- Primary button: the changes to save, otherwise the signature with the signed agreement -->
+    @if (canSign() && !form.changed()) {
+      <button hlmBtn (click)="openActionDialog('sign')">
+        <ng-icon name="lucidePenLine" size="16" />
+        Firma
+      </button>
+    } @else if (!isReadonly()) {
+      <span class="inline-flex" [hlmTooltip]="!form.changed() ? 'Nessuna modifica da salvare' : form.contractForm.invalid ? 'Completa i campi obbligatori' : ''">
+        <button hlmBtn [disabled]="form.contractForm.invalid || !form.changed()" (click)="saveDraft()">
+          Conferma
+        </button>
+      </span>
+    }
+  </rocket-page-header>
+
+  <!-- Reseller contract form -->
+  <rocket-reseller-contract-form
+    class="flex-1 min-h-0 flex flex-col"
+    #form
+    [contractData]="contract()"
+    [readonly]="isReadonly()"
+    [canRefreshCheckout]="canRefreshCheckout()"
+    (downloadRequested)="downloadAgreement()"
+    (refreshCheckoutRequested)="refreshCheckout()"
+  />
+
+  <!-- Action confirmation dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap above the footer -->
+  <hlm-dialog #actionDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      <hlm-dialog-header>
+        @switch (currentAction()) {
+          @case ('sign') {
+            <h3 hlmDialogTitle>Firmare il contratto?</h3>
+            <p hlmDialogDescription>Condizioni e sconti non saranno più modificabili. Il contratto si attiva quando il canone è pagato, se c'è, e tutti i mandati dei prodotti sono attivi.</p>
+          }
+          @case ('terminate') {
+            <h3 hlmDialogTitle>Terminare al rinnovo?</h3>
+            <p hlmDialogDescription>Il contratto resta attivo e fatturato fino al rinnovo, poi si chiude.</p>
+          }
+          @case ('reactivate') {
+            <h3 hlmDialogTitle>Riattivare il contratto?</h3>
+            <p hlmDialogDescription>Il contratto torna <strong>Attivo</strong> e si rinnova alla scadenza.</p>
+          }
+          @case ('end') {
+            <h3 hlmDialogTitle>Cessare il contratto ora?</h3>
+            <p hlmDialogDescription>Il contratto si chiude subito e l'addebito del canone si ferma. Le fatture già emesse restano dovute. Questa azione <strong>non può essere annullata.</strong></p>
+          }
+        }
+      </hlm-dialog-header>
+
+      <!-- Signed agreement, uploaded with the signature -->
+      @if (currentAction() === 'sign') {
+        <div class="flex flex-col gap-2">
+          <label hlmLabel>Contratto firmato*</label>
+          <rocket-file-drop
+            accept="application/pdf"
+            hint="PDF, fino a 10 MB."
+            [fileName]="signedFile()?.name ?? null"
+            [disabled]="isSigning()"
+            (fileSelected)="onSignedFileSelected($event)"
+            (cleared)="signedFile.set(null)"
+          />
+          @if (signedFileError(); as error) {
+            <p class="text-destructive text-sm">{{ error }}</p>
+          }
+        </div>
+      }
+
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="closeActionDialog()" [disabled]="isSigning()">Annulla</button>
+        <button
+          hlmBtn
+          [variant]="currentAction() === 'end' ? 'destructive' : 'default'"
+          [disabled]="currentAction() === 'sign' && (!signedFile() || isSigning())"
+          (click)="confirmAction()"
+        >
+          {{ isSigning() ? 'Caricamento...' : 'Conferma' }}
+        </button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

@@ -1,0 +1,51 @@
+<!-- Trigger: one row with the chosen values -->
+<button
+  type="button"
+  hlmInput
+  class="w-full h-9 flex items-center gap-2 cursor-pointer text-left"
+  hlmTooltip="Clicca per modificare"
+  [id]="inputId() || null"
+  [disabled]="disabled"
+  (click)="openEditor()"
+>
+  @if (value().length === 0) {
+    <span class="flex-1 min-w-0 truncate text-muted-foreground text-sm">{{ placeholder() }}</span>
+  } @else {
+    <rocket-chips-row [labels]="value()" />
+  }
+  <ng-icon name="lucidePencil" size="14" class="shrink-0 text-muted-foreground" />
+</button>
+
+<!-- Dialog: the choice reaches the form only on confirmation -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[520px] max-w-[calc(100vw-2rem)] sm:max-w-[520px]" *brnDialogContent="let ctx">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ title() }}</h3>
+    </hlm-dialog-header>
+
+    <!-- Search -->
+    <hlm-input-group>
+      <hlm-input-group-addon>
+        <ng-icon name="lucideSearch" size="16" />
+      </hlm-input-group-addon>
+      <input #searchInput hlmInputGroupInput placeholder="Cerca" autocomplete="off" [value]="search()" (input)="search.set(searchInput.value)" />
+    </hlm-input-group>
+
+    <!-- Options -->
+    <div class="flex flex-col max-h-72 overflow-y-auto -mx-2">
+      @for (option of filteredOptions(); track option) {
+        <label hlmLabel class="flex items-center gap-3 rounded-md px-2 py-2.5 font-normal cursor-pointer hover:bg-muted">
+          <hlm-checkbox [checked]="draft().has(option)" (checkedChange)="toggle(option)" />
+          {{ option }}
+        </label>
+      } @empty {
+        <p class="px-2 py-2 text-sm text-muted-foreground">Nessun risultato</p>
+      }
+    </div>
+
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" type="button" (click)="cancelEditor()">Annulla</button>
+      <button hlmBtn type="button" (click)="confirmEditor()">Conferma</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

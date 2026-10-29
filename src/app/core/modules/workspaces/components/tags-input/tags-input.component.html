@@ -1,0 +1,75 @@
+<div class="flex flex-col w-full">
+  @if (!hideLabel()) {
+    <label hlmLabel class="mb-2">{{ label() }}{{ required() ? '*' : '' }}</label>
+  }
+
+  <!-- Trigger: one row with the tags that fit and a badge counting the others -->
+  <button
+    type="button"
+    hlmInput
+    class="w-full h-9 flex items-center gap-2 cursor-pointer text-left"
+    hlmTooltip="Clicca per modificare"
+    [disabled]="disabled"
+    (click)="openEditor()"
+  >
+    @if (tags().length === 0) {
+      <span class="flex-1 min-w-0 truncate text-muted-foreground text-sm">{{ placeholder() }}</span>
+    } @else {
+      <rocket-chips-row [labels]="tags()" />
+    }
+    <ng-icon name="lucidePencil" size="14" class="shrink-0 text-muted-foreground" />
+  </button>
+</div>
+
+<!-- Editing dialog: the changes reach the form only on confirmation -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[520px] max-w-[calc(100vw-2rem)] sm:max-w-[520px]" *brnDialogContent="let ctx">
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ label() }}</h3>
+    </hlm-dialog-header>
+
+    <!-- Add new tag -->
+    <div class="flex items-center gap-2">
+      <input
+        [type]="inputType()"
+        [placeholder]="placeholder()"
+        [formControl]="internalControl"
+        (keydown.enter)="$event.preventDefault(); addTag()"
+        hlmInput
+        autocomplete="off"
+        class="flex-1"
+      />
+      <button hlmBtn variant="outline" type="button" (click)="addTag()" [disabled]="!internalControl.value">
+        Aggiungi
+        <ng-icon name="lucidePlus" size="16" />
+      </button>
+    </div>
+
+    <!-- Tags being edited -->
+    @if (draft().length > 0) {
+      <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto">
+        @for (tag of draft(); track $index) {
+          <span hlmBadge variant="secondary" class="text-xs flex items-center gap-1">
+            {{ tag }}
+            <button
+              type="button"
+              class="cursor-pointer hover:text-destructive flex items-center"
+              hlmTooltip="Rimuovi valore"
+              aria-label="Rimuovi valore"
+              (click)="removeTag($index)"
+            >
+              <ng-icon name="lucideX" size="12" />
+            </button>
+          </span>
+        }
+      </div>
+    } @else {
+      <p class="text-sm text-muted-foreground">Nessun elemento</p>
+    }
+
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" type="button" (click)="cancelEditor()">Annulla</button>
+      <button hlmBtn type="button" (click)="confirmEditor()">Conferma</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

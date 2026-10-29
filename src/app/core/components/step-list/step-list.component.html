@@ -1,0 +1,21 @@
+<hlm-tabs-list variant="line" class="rk-steps">
+  @for (tab of tabs(); track tab.id) {
+    @if (steps().isDisabled(tab)) {
+      <!-- A disabled button fires no hover, so the tooltip sits on a wrapper -->
+      <span class="flex" position="right" [hlmTooltip]="steps().hintOf(tab)">
+        <button [hlmTabsTrigger]="tab.id" class="rk-step w-full opacity-50 cursor-not-allowed! hover:bg-transparent! hover:text-muted-foreground!" disabled>
+          <span class="rk-step__dot"><ng-icon [name]="tab.icon" size="15" /></span>
+          <span class="truncate">{{ tab.label }}</span>
+        </button>
+      </span>
+    } @else {
+      <button [hlmTabsTrigger]="tab.id" class="rk-step">
+        <span class="rk-step__dot"><ng-icon [name]="tab.icon" size="15" /></span>
+        <span class="truncate">{{ tab.label }}</span>
+        @if (attention()(tab.id)) {
+          <span class="ml-auto size-2 shrink-0 rounded-full bg-sidebar-accent-foreground" aria-label="Da completare"></span>
+        }
+      </button>
+    }
+  }
+</hlm-tabs-list>

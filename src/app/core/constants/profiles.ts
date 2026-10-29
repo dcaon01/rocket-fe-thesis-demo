@@ -1,0 +1,223 @@
+import { AccountType } from '../enums/account-type.enum';
+import { Capability } from '../enums/capability.enum';
+import { Profile } from '../enums/profile.enum';
+
+/**
+ * Account type each profile belongs to.
+ * Lets the account type be derived from the profile instead of reading a
+ * separate group, so there is a single source of truth in the token.
+ */
+export const PROFILE_ACCOUNT_TYPE: Record<Profile, AccountType> = {
+  [Profile.KeusAdmin]: AccountType.Collaborator,
+  [Profile.KeusSales]: AccountType.Collaborator,
+  [Profile.KeusBackoffice]: AccountType.Collaborator,
+  [Profile.KeusAccounting]: AccountType.Collaborator,
+  [Profile.ResellerOwner]: AccountType.Reseller,
+  [Profile.ResellerBackoffice]: AccountType.Reseller,
+  [Profile.ResellerSales]: AccountType.Reseller,
+};
+
+/** Italian labels shown in forms and tables. */
+export const PROFILE_LABELS: Record<Profile, string> = {
+  [Profile.KeusAdmin]: 'Amministrazione',
+  [Profile.KeusSales]: 'Commerciale',
+  [Profile.KeusBackoffice]: 'Backoffice',
+  [Profile.KeusAccounting]: 'Contabilità',
+  [Profile.ResellerOwner]: 'Titolare',
+  [Profile.ResellerBackoffice]: 'Backoffice',
+  [Profile.ResellerSales]: 'Commerciale',
+};
+
+/**
+ * Profiles allowed to perform each action, mirroring the backend @Roles
+ * decorators. The interface hides what the server would refuse anyway: this
+ * map is for usability, the server is what actually enforces it.
+ */
+export const CAPABILITY_PROFILES: Record<Capability, Profile[]> = {
+  [Capability.ManageProducts]: [Profile.KeusAdmin],
+  [Capability.OpenProductWorkspaces]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.ManagePlans]: [Profile.KeusAdmin],
+  [Capability.ManageResellers]: [Profile.KeusAdmin, Profile.KeusSales],
+  [Capability.ManageCollaborators]: [Profile.KeusAdmin, Profile.ResellerOwner],
+  [Capability.ManageCompanies]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.DeleteCompanies]: [Profile.KeusAdmin],
+  [Capability.ViewProductContracts]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.ManageContracts]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.CancelContracts]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.CollectMandates]: [Profile.KeusAdmin, Profile.KeusBackoffice, Profile.KeusAccounting],
+  [Capability.CreateOrders]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.EditOrders]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.DeleteOrders]: [Profile.KeusAdmin, Profile.ResellerOwner],
+  [Capability.PriceCustomizations]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.RequestOfferApproval]: [Profile.ResellerOwner, Profile.ResellerBackoffice, Profile.ResellerSales],
+  [Capability.ApproveOffers]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.ManageFinancing]: [Profile.KeusAdmin, Profile.KeusSales],
+  [Capability.ConfirmOrders]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.DeliverOrders]: [
+    Profile.KeusAdmin,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+  ],
+  [Capability.ManageInvoices]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.ManageCustomerCharges]: [Profile.KeusAdmin, Profile.ResellerOwner, Profile.ResellerBackoffice],
+  [Capability.ManageTrials]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerSales,
+  ],
+  [Capability.DeleteTrials]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.CreateTenants]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.ViewTenants]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.ManageTenants]: [
+    Profile.KeusAdmin,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+  ],
+  [Capability.DeleteTenants]: [Profile.KeusAdmin],
+  [Capability.ViewUsers]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.ManageUsers]: [
+    Profile.KeusAdmin,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+  ],
+  [Capability.RetryUserRequests]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.DeleteUsers]: [Profile.KeusAdmin, Profile.KeusBackoffice],
+  [Capability.TerminateContracts]: [Profile.KeusAdmin],
+  [Capability.ManageAccess]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.RefreshCheckout]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.ViewResellerOwnership]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.KeusAccounting,
+  ],
+  [Capability.ViewUsage]: [Profile.KeusAdmin, Profile.KeusBackoffice, Profile.ResellerOwner, Profile.ResellerBackoffice],
+  [Capability.ViewRevenue]: [Profile.KeusAdmin, Profile.KeusSales, Profile.KeusAccounting],
+  [Capability.ViewProductRevenue]: [Profile.KeusAdmin, Profile.KeusSales, Profile.KeusAccounting],
+  [Capability.ViewSalesPipeline]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.ViewSalesOrders]: [Profile.KeusAdmin, Profile.KeusSales, Profile.KeusAccounting],
+  [Capability.ViewCustomerBase]: [Profile.KeusAdmin, Profile.KeusAccounting, Profile.KeusBackoffice],
+  [Capability.ViewGlobalCustomerBase]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.ViewNetworkMap]: [Profile.KeusAdmin, Profile.KeusAccounting, Profile.KeusBackoffice],
+  [Capability.ViewTechnicalMetrics]: [Profile.KeusAdmin],
+  [Capability.ViewResellerRevenue]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.ResellerOwner,
+    Profile.ResellerSales,
+  ],
+  [Capability.ViewResellerMargin]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.ResellerOwner,
+  ],
+  [Capability.ViewResellerUsage]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+  ],
+  [Capability.ViewResellerOverview]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusBackoffice,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+    Profile.ResellerSales,
+  ],
+  [Capability.ViewResellerBilling]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+    Profile.ResellerBackoffice,
+  ],
+  [Capability.ManageTemplates]: [Profile.KeusAdmin],
+  [Capability.ManageMaterials]: [Profile.KeusAdmin],
+  [Capability.ManageResellerLogo]: [Profile.KeusAdmin, Profile.KeusSales, Profile.ResellerOwner],
+  [Capability.OpenResellerContracts]: [Profile.KeusAdmin, Profile.KeusSales],
+  [Capability.EndResellerContracts]: [Profile.KeusAdmin, Profile.KeusAccounting],
+  [Capability.ManageAllResellers]: [Profile.KeusAdmin],
+  [Capability.ViewOwnResellerCard]: [Profile.ResellerOwner, Profile.ResellerBackoffice],
+  [Capability.EditOwnResellerData]: [Profile.ResellerOwner],
+  [Capability.ViewResellerEconomics]: [
+    Profile.KeusAdmin,
+    Profile.KeusSales,
+    Profile.KeusAccounting,
+    Profile.ResellerOwner,
+  ],
+  [Capability.DeleteResellers]: [Profile.KeusAdmin],
+  [Capability.ManageResellerTiers]: [Profile.KeusAdmin],
+};

@@ -1,0 +1,29 @@
+:host {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 3rem 2rem;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Glows placed as in the Auth / Brand panel frame, anchored to the nearest corner */
+.glow {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.glow-blue {
+  top: -420px;
+  left: -440px;
+  width: 1000px;
+  height: 1000px;
+}
+.glow-orange {
+  right: -420px;
+  bottom: -500px;
+  width: 1060px;
+  height: 1060px;
+}

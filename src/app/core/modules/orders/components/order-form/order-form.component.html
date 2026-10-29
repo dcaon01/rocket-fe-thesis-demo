@@ -1,0 +1,854 @@
+<form [formGroup]="orderForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" [attention]="needsAttentionFn" />
+    </aside>
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="['lines', 'conditions', 'offer'].includes(steps.activeTab()) || (steps.activeTab() === 'customization' && customizationsControls.length > 0) ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Informazioni -->
+      <div hlmTabsContent="info" class="flex flex-col gap-6 animate-rk-rise">
+        <!-- Refusal and missed approval: the outcome first -->
+        @if (order(); as current) {
+          @if (current.refusalReason) {
+            <div hlmAlert variant="destructive" class="bg-destructive-tint border-transparent">
+              <ng-icon name="lucideCircleX" />
+              <h4 hlmAlertTitle>Ordine rifiutato: {{ current.refusalReason | orderRefusalReason }}</h4>
+              @if (current.refusalNote) {
+                <p hlmAlertDescription>{{ current.refusalNote }}</p>
+              }
+            </div>
+          }
+          @if (current.approvalRefusalReason) {
+            <div hlmAlert variant="destructive" class="bg-destructive-tint border-transparent">
+              <ng-icon name="lucideCircleX" />
+              <h4 hlmAlertTitle>Offerta non approvata</h4>
+              <p hlmAlertDescription>{{ current.approvalRefusalReason }}</p>
+            </div>
+          }
+        }
+
+        <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+          <!-- Company -->
+          <div class="flex flex-col gap-2 flex-1">
+            @if (isCompanyEditable()) {
+              <label hlmLabel for="companyId">Azienda*</label>
+              <hlm-combobox formControlName="companyId" [filter]="comboboxContainsFilter" [itemToString]="companyLabel" (searchChange)="companies.search.set($event)">
+                <hlm-combobox-input placeholder="Cerca per ragione sociale o partita IVA" class="[&_[data-slot=input-group]]:bg-background" />
+                <ng-template hlmComboboxPortal>
+                  <hlm-combobox-content>
+                    <div hlmComboboxList>
+                      @for (option of companies.options(); track option.value) {
+                        <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                      }
+                      <div hlmComboboxEmpty [class.flex!]="companies.options().length === 0">Nessuna azienda trovata</div>
+                    </div>
+                  </hlm-combobox-content>
+                </ng-template>
+              </hlm-combobox>
+            } @else {
+              <label hlmLabel>Azienda</label>
+              @if (orderForm.controls.companyId.value && companyLabel(orderForm.controls.companyId.value); as company) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ company }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Code -->
+          @if (!readonly()) {
+            <div class="flex flex-col gap-2 flex-1">
+              <label hlmLabel for="code">Codice</label>
+              <input type="text" id="code" placeholder="Generato alla creazione se vuoto" hlmInput formControlName="code" autocomplete="off" />
+            </div>
+          } @else {
+            <rocket-code-item label="Codice" [value]="orderForm.controls.code.value" />
+          }
+
+          <!-- Status -->
+          @if (order(); as current) {
+            <div class="flex flex-col gap-2 flex-1">
+              <label hlmLabel>Stato</label>
+              <div class="h-9 flex items-center">
+                <span hlmBadge variant="outline" rocketOrderStatus [status]="current.status">{{ current.status | orderStatus }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Order data (edit only): fixed, so always shown as values -->
+        @if (order(); as current) {
+          <!-- Sale -->
+          <div class="flex flex-col gap-4 border-t pt-6">
+            <h3 class="text-sm font-semibold">Vendita</h3>
+            <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+              <!-- Channel and seller, for Keus wherever the order is opened: a reseller's orders are all its own -->
+              @if (!isReseller()) {
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel>Canale</label>
+                  @if (current.channel; as channel) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ channel | salesChannel }}</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                </div>
+
+                <!-- Reseller: who sells an order of the indirect channel -->
+                @if (current.resellerPath | resellerOwner; as reseller) {
+                  <div class="flex flex-col gap-2 flex-1">
+                    <label hlmLabel>Rivenditore</label>
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ reseller }}</span>
+                  </div>
+                }
+              }
+
+              <!-- Requested at -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel>Richiesto il</label>
+                @if (current.requestedAt; as requestedAt) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ requestedAt | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              </div>
+
+              <!-- Approval of the reseller offer -->
+              @if (current.approvedAt) {
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel>Approvato il</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ current.approvedAt | date:'dd/MM/yyyy' }}</span>
+                </div>
+              }
+
+              <!-- Delivery date -->
+              @if (current.deliveryDate) {
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel>Consegna prevista</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ current.deliveryDate | date:'dd/MM/yyyy' }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Financing -->
+          @if (current.financier && current.financier !== 'NONE') {
+            <div class="flex flex-col gap-4 border-t pt-6">
+              <h3 class="text-sm font-semibold">Finanziamento</h3>
+              <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel>Finanziaria</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">Grenke</span>
+                </div>
+                <rocket-code-item label="Pratica" [value]="current.financierReference" />
+                <div class="flex flex-col gap-2 flex-1">
+                  <label hlmLabel>Durata</label>
+                  @if (current.financedYears) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ current.financedYears }} anni</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Righe -->
+      <div hlmTabsContent="lines" class="animate-rk-rise">
+        <div class="w-full flex flex-col gap-8">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <thead hlmTHead>
+                <tr hlmTr class="bg-background hover:bg-background">
+                  <th hlmTh>{{ readonly() ? 'Prodotto' : 'Prodotto*' }}</th>
+                  <th hlmTh>Piano</th>
+                  <th hlmTh class="w-28">Seats</th>
+                  <th hlmTh class="w-32">Sconto attivazione %</th>
+                  <th hlmTh class="w-32">Sconto canone %</th>
+                  @if (hasLineStatuses()) {
+                    <th hlmTh>Erogazione</th>
+                  }
+                  <th hlmTh class="text-center"></th>
+                </tr>
+              </thead>
+              <tbody hlmTBody formArrayName="lines">
+                @for (line of linesControls; track line; let i = $index) {
+                  <tr hlmTr [formGroupName]="i">
+                    @if (!readonly()) {
+                      <td hlmTd>
+                        <hlm-combobox formControlName="productId" class="min-w-40" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+                          <hlm-combobox-input placeholder="Cerca un prodotto" class="[&_[data-slot=input-group]]:bg-background" />
+                          <ng-template hlmComboboxPortal>
+                            <hlm-combobox-content>
+                              <div hlmComboboxList>
+                                @for (product of productsFor(i); track product.id) {
+                                  <hlm-combobox-item [value]="product.id" class="cursor-pointer">{{ product.name }}</hlm-combobox-item>
+                                }
+                                <div hlmComboboxEmpty [class.flex!]="productsFor(i).length === 0">Nessun prodotto trovato</div>
+                              </div>
+                            </hlm-combobox-content>
+                          </ng-template>
+                        </hlm-combobox>
+                      </td>
+                      <td hlmTd>
+                        <!-- The plans depend on the product: until one is chosen the field stays off -->
+                        @if (line.controls.productId.value) {
+                          <hlm-combobox formControlName="planId" class="min-w-40" [filter]="comboboxContainsFilter" [itemToString]="planLabel">
+                            <hlm-combobox-input placeholder="Cerca un piano" class="[&_[data-slot=input-group]]:bg-background" />
+                            <ng-template hlmComboboxPortal>
+                              <hlm-combobox-content>
+                                <div hlmComboboxList>
+                                  @for (plan of plansFor(line.controls.productId.value); track plan.id) {
+                                    <hlm-combobox-item [value]="plan.id" class="cursor-pointer">{{ plan.name }}</hlm-combobox-item>
+                                  }
+                                  <div hlmComboboxEmpty [class.flex!]="plansFor(line.controls.productId.value).length === 0">Nessun piano disponibile</div>
+                                </div>
+                              </hlm-combobox-content>
+                            </ng-template>
+                          </hlm-combobox>
+                        } @else {
+                          <input type="text" hlmInput class="min-w-40 w-full" placeholder="Scegli prima il prodotto" disabled />
+                        }
+                      </td>
+                      <td hlmTd>
+                        @if (hasSeats(line.controls.productId.value, line.controls.planId.value)) {
+                          <input type="number" [id]="'line-seats-' + i" placeholder="Seats" hlmInput formControlName="seats" step="1" min="1" autocomplete="off" />
+                        } @else {
+                          -
+                        }
+                      </td>
+                      <td hlmTd>
+                        <input type="number" [id]="'line-activation-discount-' + i" hlmInput formControlName="activationDiscountPercent" step="1" min="0" [max]="maxDiscount('activation')" autocomplete="off" />
+                      </td>
+                      <td hlmTd>
+                        <input type="number" [id]="'line-recurring-discount-' + i" hlmInput formControlName="recurringDiscountPercent" step="1" min="0" [max]="maxDiscount('recurring')" autocomplete="off" />
+                      </td>
+                    } @else {
+                      @let storedLine = orderLineOf(line.controls.productId.value);
+                      <td hlmTd>
+                        @if ((line.controls.productId.value && productLabel(line.controls.productId.value)) || storedLine?.productName; as product) {
+                          {{ product }}
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                      <td hlmTd>
+                        @if ((line.controls.planId.value && planLabel(line.controls.planId.value)) || storedLine?.planName; as plan) {
+                          {{ plan }}
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                      <td hlmTd>
+                        @if (line.controls.seats.value != null) {
+                          {{ line.controls.seats.value }}
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                      <td hlmTd>
+                        @if (line.controls.activationDiscountPercent.value != null) {
+                          {{ line.controls.activationDiscountPercent.value }} %
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                      <td hlmTd>
+                        @if (line.controls.recurringDiscountPercent.value != null) {
+                          {{ line.controls.recurringDiscountPercent.value }} %
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                    }
+                    @if (hasLineStatuses()) {
+                      <td hlmTd>
+                        @if (orderLineOf(line.controls.productId.value); as orderLine) {
+                          <div class="flex flex-col items-start gap-1">
+                            @if (orderLine.status; as status) {
+                              <span hlmBadge variant="outline">{{ isProvisioning(orderLine) && !isLeftBehind(orderLine) ? 'In erogazione' : (status | orderLineStatus) }}</span>
+                            }
+                            @if (orderLine.status === 'TO_BE_PROVISIONED' && orderLine.tenantStatus; as tenantStatus) {
+                              <span class="text-xs text-muted-foreground">Tenant: {{ tenantStatus | tenantStatus }}</span>
+                              @if (orderLine.tenantSyncState === SyncState.Failed) {
+                                <span class="text-xs text-muted-foreground">Errore: {{ orderLine.tenantFailureReason ?? 'nessun motivo indicato' }}</span>
+                              } @else if (tenantStatus === TenantStatus.Active && orderLine.tenantPendingUsers) {
+                                <span class="text-xs text-muted-foreground">Utenti in attesa: {{ orderLine.tenantPendingUsers }}</span>
+                              }
+                            }
+                          </div>
+                        }
+                      </td>
+                    }
+                    <td hlmTd class="text-right space-x-4">
+                      @if (!readonly()) {
+                        <button hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina riga" aria-label="Elimina riga" (click)="openDeleteDialog('line', i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                      }
+                      @if (orderLineOf(line.controls.productId.value); as orderLine) {
+                        @if (orderLine.tenantId) {
+                          <a hlmTooltip="Apri tenant" [routerLink]="['/products/workspaces', orderLine.productId, 'tenants', 'edit', orderLine.tenantId]"><ng-icon name="lucideServer" size="18" /></a>
+                        }
+                        @if (canProvision() && isLeftBehind(orderLine)) {
+                          <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Completa erogazione" aria-label="Completa erogazione" (click)="completeLine.emit(orderLine)"><ng-icon name="lucideCircleCheck" size="16" /></button>
+                        }
+                        @if (canProvision() && orderLine.status === 'TO_BE_PROVISIONED' && !isProvisioning(orderLine)) {
+                          <a hlmTooltip="Eroga riga" [routerLink]="[ordersPath(), orderLine.orderId, 'provision', orderLine.productId]"><ng-icon name="lucidePackagePlus" size="18" /></a>
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <!-- Adding line row -->
+            @if (!readonly()) {
+              <div class="w-full flex justify-center items-center py-4">
+                <button type="button" hlmBtn variant="ghost" (click)="addLine()" [disabled]="!orderForm.getRawValue().companyId || sellerFailed()">
+                  Aggiungi riga
+                  <ng-icon name="lucidePlus" hlm />
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Personalizzazioni -->
+      <div hlmTabsContent="customization" class="animate-rk-rise">
+        <div class="w-full flex flex-col gap-6" formArrayName="customizations">
+          @for (customization of customizationsControls; track customization; let i = $index) {
+            @let stored = storedCustomization(customization);
+            @let kind = customization.controls.kind.value;
+            <div hlmCard [formGroupName]="i">
+              <!-- Customization header -->
+              <div hlmCardHeader>
+                <h4 hlmCardTitle class="flex items-center gap-2">
+                  <ng-icon name="lucidePuzzle" size="16" />
+                  {{ customizationLabel(kind, customization.controls.productId.value) }}
+                  @if (stored) {
+                    <span hlmBadge variant="outline" rocketCustomizationStatus [status]="stored.status">{{ stored.status | customizationStatus }}</span>
+                  }
+                </h4>
+                <div hlmCardAction class="flex items-center gap-4">
+                  @if (evaluating() && stored) {
+                    @if (customization.controls.evaluation.valid) {
+                      <button hlmBtn variant="outline" size="sm" type="button" (click)="openEvaluationDialog(i, 'edit')">
+                        <ng-icon name="lucidePencil" size="16" />
+                        Modifica
+                      </button>
+                    } @else {
+                      <button hlmBtn variant="outline" size="sm" type="button" (click)="openEvaluationDialog(i, 'refuse')">
+                        <ng-icon name="lucideCircleX" size="16" />
+                        Rifiuta
+                      </button>
+                      <button hlmBtn variant="outline" size="sm" type="button" (click)="openEvaluationDialog(i, 'quote')">
+                        <ng-icon name="lucideCalculator" size="16" />
+                        Quota
+                      </button>
+                    }
+                  }
+                  @if (stored && customizationActions()(stored).length > 0) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" [hlmDropdownMenuTrigger]="customizationMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+                      <ng-icon name="lucideEllipsisVertical" size="16" />
+                    </button>
+                    <ng-template #customizationMenu>
+                      <hlm-dropdown-menu>
+                        @for (action of customizationActions()(stored); track action) {
+                          <button hlmDropdownMenuItem (click)="customizationAction.emit({ action, customization: stored })">
+                            <ng-icon [name]="customizationActionItems[action].icon" class="mr-2 h-4 w-4" />
+                            <span>{{ customizationActionItems[action].label }}</span>
+                          </button>
+                        }
+                      </hlm-dropdown-menu>
+                    </ng-template>
+                  }
+                  @if (!readonly()) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina personalizzazione" aria-label="Elimina personalizzazione" (click)="openDeleteDialog('customization', i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  }
+                </div>
+              </div>
+
+              <div hlmCardContent class="flex flex-col gap-8">
+                <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+                  <!-- Product of the line -->
+                  @if (kind === CustomizationKind.Product) {
+                    <div class="flex flex-col gap-2 flex-1">
+                      @if (!readonly()) {
+                        <label hlmLabel [for]="'customization-product-' + i">Prodotto*</label>
+                        <hlm-combobox formControlName="productId" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+                          <hlm-combobox-input [id]="'customization-product-' + i" placeholder="Cerca un prodotto delle righe" class="[&_[data-slot=input-group]]:bg-background" />
+                          <ng-template hlmComboboxPortal>
+                            <hlm-combobox-content>
+                              <div hlmComboboxList>
+                                @for (productId of customizableProductsFor(i); track productId) {
+                                  <hlm-combobox-item [value]="productId" class="cursor-pointer">{{ productLabel(productId) }}</hlm-combobox-item>
+                                }
+                                <div hlmComboboxEmpty [class.flex!]="customizableProductsFor(i).length === 0">Nessuna riga da personalizzare</div>
+                              </div>
+                            </hlm-combobox-content>
+                          </ng-template>
+                        </hlm-combobox>
+                      } @else {
+                        <label hlmLabel>Prodotto</label>
+                        @if (customization.controls.productId.value && productLabel(customization.controls.productId.value); as product) {
+                          <span class="text-base font-medium min-h-9 flex items-center">{{ product }}</span>
+                        } @else {
+                          <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                        }
+                      }
+                    </div>
+                  }
+
+                  <!-- Description -->
+                  <div class="flex flex-col gap-2 col-span-3">
+                    @if (!readonly()) {
+                      <label hlmLabel [for]="'customization-description-' + i">Descrizione{{ customization.controls.attachments.value.length ? '' : '*' }}</label>
+                      <textarea hlmTextarea [id]="'customization-description-' + i" formControlName="description" placeholder="Descrizione della personalizzazione" class="w-full"></textarea>
+                    } @else {
+                      <label hlmLabel>Descrizione</label>
+                      @if (customization.controls.description.value; as description) {
+                        <p class="text-base leading-relaxed whitespace-pre-line">{{ description }}</p>
+                      } @else {
+                        <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                      }
+                    }
+                  </div>
+
+                  <!-- Evaluation: given by the back office in the quotation dialog, shown here once complete -->
+                  @if (evaluating() && stored) {
+                    @let evaluation = customization.controls.evaluation.getRawValue();
+                    @if (customization.controls.evaluation.valid) {
+                      <div class="flex flex-col gap-2 flex-1">
+                        <label hlmLabel>Esito</label>
+                        <span class="text-base font-medium min-h-9 flex items-center">{{ evaluation.outcome === CustomizationStatus.Quoted ? 'Quotata' : 'Non accolta' }}</span>
+                      </div>
+                      @if (evaluation.outcome === CustomizationStatus.Quoted) {
+                        <div class="flex flex-col gap-2 flex-1">
+                          <label hlmLabel>Importo una tantum</label>
+                          <span class="text-xl font-bold min-h-9 flex items-center">{{ evaluation.oneOffAmount ? (evaluation.oneOffAmount | currency:'EUR':'symbol':'1.2-2') : '-' }}</span>
+                        </div>
+                        <div class="flex flex-col gap-2 flex-1">
+                          <label hlmLabel>Incremento annuale del canone</label>
+                          <span class="text-xl font-bold min-h-9 flex items-center">{{ evaluation.recurringIncreaseAmount ? (evaluation.recurringIncreaseAmount | currency:'EUR':'symbol':'1.2-2') : '-' }}</span>
+                        </div>
+                      } @else {
+                        <div class="flex flex-col gap-2 col-span-2">
+                          <label hlmLabel>Motivo del rifiuto</label>
+                          <span class="text-base font-medium min-h-9 flex items-center">{{ evaluation.refusalReason }}</span>
+                        </div>
+                      }
+                    }
+                  } @else {
+                    @if (stored?.status === 'QUOTED') {
+                      <div class="flex flex-col gap-2 flex-1">
+                        <label hlmLabel>Importo una tantum</label>
+                        @if (stored?.listOneOffCents != null) {
+                          <span class="text-xl font-bold min-h-9 flex items-center">{{ stored!.listOneOffCents! / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                        } @else {
+                          <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                        }
+                      </div>
+                      <div class="flex flex-col gap-2 flex-1">
+                        <label hlmLabel>Incremento annuale del canone</label>
+                        @if (stored?.listRecurringIncreaseCents != null) {
+                          <span class="text-xl font-bold min-h-9 flex items-center">{{ stored!.listRecurringIncreaseCents! / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                        } @else {
+                          <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                        }
+                      </div>
+                      <div class="flex flex-col gap-2 flex-1">
+                        <label hlmLabel>Sconto</label>
+                        @if (stored?.discountPercent != null) {
+                          <span class="text-xl font-bold min-h-9 flex items-center">{{ stored!.discountPercent }}%</span>
+                        } @else {
+                          <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                        }
+                      </div>
+                    }
+                    @if (stored?.refusalReason; as refusalReason) {
+                      <div hlmAlert variant="destructive" class="col-span-3 bg-destructive-tint border-transparent">
+                        <ng-icon name="lucideCircleX" />
+                        <h4 hlmAlertTitle>Personalizzazione non accolta</h4>
+                        <p hlmAlertDescription>{{ refusalReason }}</p>
+                      </div>
+                    }
+                    @if (stored?.status === CustomizationStatus.Requested) {
+                      <div class="col-span-3 flex items-center gap-2 text-muted-foreground">
+                        <ng-icon name="lucideHourglass" size="16" />
+                        <span>In attesa di quotazione</span>
+                      </div>
+                    }
+                  }
+                </div>
+
+                <!-- Attachments -->
+                <div class="flex flex-col gap-3">
+                  <label hlmLabel>Allegati</label>
+                  <div class="grid grid-cols-2 gap-3">
+                    @for (file of customization.controls.attachments.value; track $index; let f = $index) {
+                      <div hlmItem variant="outline" size="sm" class="rounded-xl bg-background">
+                        <div hlmItemMedia variant="icon" class="rk-icon-tile size-8">
+                          <ng-icon [name]="file.type === 'PDF' ? 'lucideFileText' : 'lucideFileAudio'" size="16" />
+                        </div>
+                        <div hlmItemContent>
+                          <div hlmItemTitle class="truncate">{{ file.name }}</div>
+                          @if (file.file) {
+                            <p hlmItemDescription class="text-destructive">Salva per caricare</p>
+                          }
+                        </div>
+                        <div hlmItemActions>
+                          @if (file.s3Key) {
+                            <button hlmBtn variant="ghost" size="sm" type="button" (click)="downloadAttachment(file)">
+                              Scarica
+                              <ng-icon hlm name="lucideDownload" size="16" />
+                            </button>
+                          }
+                          @if (!readonly()) {
+                            <button hlmBtn variant="ghost" size="sm" type="button" hlmTooltip="Rimuovi allegato" aria-label="Rimuovi allegato" (click)="removeAttachment(customization, f)" [disabled]="isUploading()">
+                              <ng-icon hlm name="lucideX" size="16" />
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    } @empty {
+                      <p class="col-span-2 text-sm text-muted-foreground">Nessun allegato</p>
+                    }
+                  </div>
+                  @if (!readonly()) {
+                    <div>
+                      @if (order()) {
+                        <div
+                          hlmItem
+                          variant="outline"
+                          size="sm"
+                          class="border-dashed rounded-xl bg-background transition-colors"
+                          rocketFileDropZone
+                          [fileDropDisabled]="isUploading()"
+                          (filesDropped)="onFilesSelected($event, customization)"
+                        >
+                          <div hlmItemMedia variant="icon" class="rk-icon-tile size-8">
+                            <ng-icon name="lucideFileUp" size="16" />
+                          </div>
+                          <div hlmItemContent>
+                            <div hlmItemTitle>Trascina qui gli allegati</div>
+                            <p hlmItemDescription>PDF o file audio.</p>
+                          </div>
+                          <div hlmItemActions>
+                            <button hlmBtn variant="outline" size="sm" type="button" (click)="fileInput.click()" [disabled]="isUploading()">
+                              Allega PDF o audio
+                              <ng-icon hlm name="lucidePaperclip" size="16" />
+                            </button>
+                            <input #fileInput type="file" multiple class="hidden" accept="application/pdf,audio/*" (change)="onFilesChosen($event, customization)" />
+                          </div>
+                        </div>
+                      } @else {
+                        <!-- A disabled button fires no hover, so the tooltip sits on a wrapper -->
+                        <span class="inline-flex" hlmTooltip="Gli allegati si caricano dopo aver creato l'ordine.">
+                          <button hlmBtn variant="outline" size="sm" type="button" disabled>
+                            Allega PDF o audio
+                            <ng-icon hlm name="lucidePaperclip" size="16" />
+                          </button>
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <hlm-empty class="p-6! md:p-6!">
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessuna personalizzazione.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          }
+
+          <!-- Adding customization -->
+          @if (!readonly()) {
+            <div class="w-full flex justify-center items-center gap-4">
+              @if (canCustomizeLine()) {
+                <button type="button" hlmBtn variant="ghost" (click)="addCustomization(CustomizationKind.Product)">
+                  Aggiungi personalizzazione
+                  <ng-icon name="lucidePuzzle" hlm />
+                </button>
+              } @else {
+                <span class="inline-flex" hlmTooltip="Ogni riga dell'ordine ha già la sua personalizzazione, o non ci sono righe.">
+                  <button type="button" hlmBtn variant="ghost" disabled>
+                    Aggiungi personalizzazione
+                    <ng-icon name="lucidePuzzle" hlm />
+                  </button>
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Condizioni economiche -->
+      <div hlmTabsContent="conditions" class="animate-rk-rise">
+        <div class="w-full flex flex-col gap-6">
+          <!-- Lines summary -->
+          <div class="rk-step-panel w-full flex flex-col gap-3 [&_[data-slot=table-container]]:border-0 [&_[data-slot=table-container]]:shadow-none [&_[data-slot=table-container]]:bg-transparent">
+            <h4 class="text-sm font-semibold">Righe</h4>
+            <div hlmTableContainer>
+              <table hlmTable>
+                <thead hlmTHead>
+                  <tr hlmTr class="bg-background hover:bg-background">
+                    <th hlmTh>Prodotto</th>
+                    <th hlmTh>Piano</th>
+                    <th hlmTh>Frequenza</th>
+                    <th hlmTh>Seats</th>
+                    <th hlmTh>Prezzo unitario</th>
+                    <th hlmTh>Attivazione</th>
+                    <th hlmTh>Sconto attivazione</th>
+                    <th hlmTh>Canone</th>
+                    <th hlmTh>Sconto canone</th>
+                    @if (hasAssistance()) {
+                      <th hlmTh>Assistenza</th>
+                    }
+                  </tr>
+                </thead>
+                @if (pricedLines().length > 0) {
+                  <tbody hlmTBody>
+                    @for (line of pricedLines(); track $index) {
+                      <tr hlmTr>
+                        <td hlmTd class="font-medium">{{ line.productName }}</td>
+                        <td hlmTd>{{ line.plan.name }}</td>
+                        <td hlmTd>{{ line.plan.type === PlanType.OneTime ? 'Una tantum' : (line.plan.billingInterval ?? '' | paymentType) }}</td>
+                        <td hlmTd>{{ line.seats ?? '-' }}</td>
+                        <td hlmTd>{{ line.unitPriceCents !== undefined ? (line.unitPriceCents / 100 | currency:'EUR':'symbol':'1.2-2') : '-' }}</td>
+                        <td hlmTd>{{ line.listActivationCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</td>
+                        <td hlmTd>{{ line.activationDiscountPercent }}%</td>
+                        <td hlmTd>{{ line.listRecurringCents !== undefined ? (line.listRecurringCents / 100 | currency:'EUR':'symbol':'1.2-2') : '-' }}</td>
+                        <td hlmTd>{{ line.recurringDiscountPercent }}%</td>
+                        @if (hasAssistance()) {
+                          <td hlmTd>
+                            @if (line.plan.assistance; as assistance) {
+                              {{ assistance.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+                              @if (assistance.label) {
+                                <span class="text-xs text-muted-foreground">{{ assistance.label }}</span>
+                              }
+                            } @else {
+                              -
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                } @else {
+                  <caption hlmCaption>
+                    <hlm-empty class="p-6! md:p-6!">
+                      <hlm-empty-header>
+                        <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                        <p hlmEmptyDescription>Nessuna riga con un piano.</p>
+                      </hlm-empty-header>
+                    </hlm-empty>
+                  </caption>
+                }
+              </table>
+            </div>
+          </div>
+
+          <!-- Customizations summary -->
+          @if (customizationRows().length > 0) {
+            <div class="rk-step-panel w-full flex flex-col gap-3 [&_[data-slot=table-container]]:border-0 [&_[data-slot=table-container]]:shadow-none [&_[data-slot=table-container]]:bg-transparent">
+              <h4 class="text-sm font-semibold">Personalizzazioni</h4>
+              <div hlmTableContainer>
+                <table hlmTable>
+                  <thead hlmTHead>
+                    <tr hlmTr class="bg-background hover:bg-background">
+                      <th hlmTh>Personalizzazione</th>
+                      <th hlmTh>Quotazione</th>
+                      <th hlmTh>Una tantum</th>
+                      <th hlmTh>Incremento annuale</th>
+                      <th hlmTh>Sconto</th>
+                    </tr>
+                  </thead>
+                  <tbody hlmTBody>
+                    @for (row of customizationRows(); track $index) {
+                      @let quoted = row.status === 'QUOTED' ? row.stored : undefined;
+                      <tr hlmTr>
+                        <td hlmTd class="font-medium">{{ row.label }}</td>
+                        <td hlmTd><span hlmBadge variant="outline" rocketCustomizationStatus [status]="row.status">{{ row.status | customizationStatus }}</span></td>
+                        <td hlmTd>{{ quoted?.listOneOffCents != null ? (quoted!.listOneOffCents! / 100 | currency:'EUR':'symbol':'1.2-2') : '-' }}</td>
+                        <td hlmTd>{{ quoted?.listRecurringIncreaseCents != null ? (quoted!.listRecurringIncreaseCents! / 100 | currency:'EUR':'symbol':'1.2-2') : '-' }}</td>
+                        <td hlmTd>{{ quoted ? quoted.discountPercent + '%' : '-' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Totals and discounted totals side by side -->
+          <div class="w-full grid gap-x-8 gap-y-8" [class.grid-cols-2]="hasDiscounts()">
+            <!-- Totals -->
+            <div class="rk-step-panel w-full flex flex-col gap-3">
+              <h4 class="text-sm font-semibold">Totali</h4>
+              <div class="w-full grid grid-cols-2 gap-x-8 gap-y-4">
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Una tantum netto</label>
+                  <p class="font-bold text-xl">{{ totals().listOneOffCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Una tantum IVA inclusa</label>
+                  <p class="font-bold text-xl">{{ withVat(totals().listOneOffCents) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Mensile netto</label>
+                  <p class="font-bold text-xl">{{ totals().listMonthlyCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Mensile IVA inclusa</label>
+                  <p class="font-bold text-xl">{{ withVat(totals().listMonthlyCents) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Annuale netto</label>
+                  <p class="font-bold text-xl">{{ totals().listMonthlyCents * 12 / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel class="text-xs text-muted-foreground">Annuale IVA inclusa</label>
+                  <p class="font-bold text-xl">{{ withVat(totals().listMonthlyCents * 12) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Discounted totals -->
+            @if (hasDiscounts()) {
+              <div class="rk-step-panel w-full flex flex-col gap-3">
+                <h4 class="text-sm font-semibold">Dovuto con sconti</h4>
+                <div class="w-full grid grid-cols-2 gap-x-8 gap-y-4">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Una tantum dovuto netto</label>
+                    <p class="font-bold text-xl">{{ totals().offerOneOffCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Una tantum dovuto IVA inclusa</label>
+                    <p class="font-bold text-xl">{{ withVat(totals().offerOneOffCents) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Mensile dovuto netto</label>
+                    <p class="font-bold text-xl">{{ totals().offerMonthlyCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Mensile dovuto IVA inclusa</label>
+                    <p class="font-bold text-xl">{{ withVat(totals().offerMonthlyCents) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Annuale dovuto netto</label>
+                    <p class="font-bold text-xl">{{ totals().offerMonthlyCents * 12 / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs text-muted-foreground">Annuale dovuto IVA inclusa</label>
+                    <p class="font-bold text-xl">{{ withVat(totals().offerMonthlyCents * 12) / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Offerta -->
+      @if (offerHint() === null) {
+        <div hlmTabsContent="offer" class="animate-rk-rise">
+          <ng-content select="[orderOffer]" />
+        </div>
+      }
+      @if (!readonly() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>
+
+<!-- Delete dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      @if (pendingDeletion?.target === 'customization') {
+        <h3 hlmDialogTitle>Eliminare la personalizzazione?</h3>
+        <p hlmDialogDescription>La personalizzazione e i suoi allegati escono dall'ordine al salvataggio.</p>
+      } @else {
+        <h3 hlmDialogTitle>Eliminare la riga?</h3>
+        <p hlmDialogDescription>
+          @if (pendingDeletion && lineHasCustomization(pendingDeletion.index)) {
+            La riga esce dall'ordine al salvataggio, insieme alla sua personalizzazione.
+          } @else {
+            La riga esce dall'ordine al salvataggio.
+          }
+        </p>
+      }
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteDialog()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="confirmDeletion()">Conferma</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Quotation dialog: the outcome of one customization, sent with the others by «Salva quotazione» -->
+<hlm-dialog #evaluationDialog (closed)="onEvaluationDialogClosed()">
+  <hlm-dialog-content class="w-[680px] max-w-[calc(100vw-2rem)] sm:max-w-[680px]" *brnDialogContent="let ctx">
+    @if (quoting(); as quote) {
+      @let evaluation = customizationsControls[quote.index].controls.evaluation;
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>
+          @switch (quote.mode) {
+            @case ('quote') { Quota la personalizzazione }
+            @case ('refuse') { Rifiuta la personalizzazione }
+            @default { Modifica l'esito }
+          }
+        </h3>
+        <p hlmDialogDescription>{{ customizationLabel(customizationsControls[quote.index].controls.kind.value, customizationsControls[quote.index].controls.productId.value) }}</p>
+      </hlm-dialog-header>
+      <div [formGroup]="evaluation" class="grid grid-cols-2 gap-x-5 gap-y-6">
+        @if (quote.mode === 'edit') {
+          <div class="flex flex-col gap-2 col-span-2">
+            <label hlmLabel for="evaluation-outcome">Esito*</label>
+            <brn-select id="evaluation-outcome" formControlName="outcome" placeholder="Da valutare">
+              <hlm-select-trigger class="w-full">
+                <hlm-select-value />
+              </hlm-select-trigger>
+              <hlm-select-content>
+                <hlm-option [value]="CustomizationStatus.Quoted">Quotata</hlm-option>
+                <hlm-option [value]="CustomizationStatus.Refused">Non accolta</hlm-option>
+              </hlm-select-content>
+            </brn-select>
+          </div>
+        }
+        @if (evaluation.controls.outcome.value === CustomizationStatus.Quoted) {
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="evaluation-one-off">Importo una tantum (€)</label>
+            <input rocketMoneyInput hlmInput id="evaluation-one-off" formControlName="oneOffAmount" placeholder="0,00" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="evaluation-recurring">Incremento annuale del canone (€)</label>
+            <input rocketMoneyInput hlmInput id="evaluation-recurring" formControlName="recurringIncreaseAmount" placeholder="0,00" />
+          </div>
+        } @else if (evaluation.controls.outcome.value === CustomizationStatus.Refused) {
+          <div class="flex flex-col gap-2 col-span-2">
+            <label hlmLabel for="evaluation-refusal">Motivo del rifiuto*</label>
+            <textarea hlmTextarea id="evaluation-refusal" formControlName="refusalReason" placeholder="Motivo del rifiuto" class="w-full"></textarea>
+          </div>
+        }
+      </div>
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" type="button" (click)="cancelEvaluation()">Annulla</button>
+        <button hlmBtn type="button" [variant]="quote.mode === 'refuse' ? 'destructive' : 'default'" [disabled]="evaluation.invalid" (click)="confirmEvaluation()">
+          @switch (quote.mode) {
+            @case ('quote') { Quota }
+            @case ('refuse') { Rifiuta }
+            @default { Conferma }
+          }
+        </button>
+      </hlm-dialog-footer>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>

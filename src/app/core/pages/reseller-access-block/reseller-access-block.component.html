@@ -1,0 +1,105 @@
+<main class="min-h-svh bg-sidebar w-full flex items-center justify-center px-6 py-10 text-foreground">
+  <div hlmCard class="relative w-full max-w-xl p-10 gap-8">
+    <!-- Header -->
+    <div class="flex flex-col items-center gap-4 text-center">
+      <div hlmEmptyMedia variant="icon" class="rk-icon-tile size-16 rounded-lg">
+        <ng-icon [name]="icon()" size="30" />
+      </div>
+      <div class="flex flex-col items-center gap-2">
+        <h1 hlmCardTitle class="text-2xl font-semibold tracking-tight">{{ title() }}</h1>
+        <p hlmCardDescription class="text-base">{{ description() }}</p>
+      </div>
+    </div>
+
+    @if (access(); as access) {
+      <!-- Activation: the first fee, then the mandates -->
+      @if (access.state === 'ACTIVATING' && access.canComplete) {
+        <div class="flex flex-col gap-3">
+          @if (access.fee; as fee) {
+            <div hlmItem variant="outline" class="rounded-xl">
+              <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+                <ng-icon name="lucideCreditCard" size="18" />
+              </div>
+              <div hlmItemContent>
+                <div hlmItemTitle>Canone del primo anno</div>
+                <p hlmItemDescription>{{ fee.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</p>
+              </div>
+              <div hlmItemActions>
+                @if (fee.paid) {
+                  <span class="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <ng-icon name="lucideCircleCheck" size="16" />
+                    Pagato
+                  </span>
+                } @else {
+                  <button hlmBtn size="sm" type="button" (click)="payFee()">Paga</button>
+                }
+              </div>
+            </div>
+          }
+
+          @for (mandate of access.mandates; track mandate.productId) {
+            <div hlmItem variant="outline" class="rounded-xl">
+              <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+                <ng-icon name="lucideLandmark" size="18" />
+              </div>
+              <div hlmItemContent>
+                <div hlmItemTitle>Mandato SEPA per {{ mandate.productName }}</div>
+                @if (mandate.mandateAt) {
+                  <p hlmItemDescription>Attivo dal {{ mandate.mandateAt | date:'dd/MM/yyyy' }}</p>
+                } @else {
+                  <p hlmItemDescription>Da dare</p>
+                }
+              </div>
+              <div hlmItemActions>
+                @if (mandate.mandateAt) {
+                  <span class="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <ng-icon name="lucideCircleCheck" size="16" />
+                    Dato
+                  </span>
+                } @else {
+                  <button hlmBtn size="sm" type="button" (click)="giveMandate(mandate)">Dai il mandato</button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Unpaid charges -->
+      @if (access.state === 'SUSPENDED' && access.canComplete) {
+        <div class="flex flex-col gap-3">
+          @for (charge of access.unpaidCharges; track $index) {
+            <div hlmItem variant="outline" class="rounded-xl">
+              <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+                <ng-icon name="lucideCreditCard" size="18" />
+              </div>
+              <div hlmItemContent>
+                <div hlmItemTitle>{{ charge.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</div>
+                <p hlmItemDescription>
+                  Scaduto il {{ charge.dueDate | date:'dd/MM/yyyy' }}@if (charge.invoiceNumbers.length) { · Fattura {{ charge.invoiceNumbers.join(', ') }}}
+                </p>
+              </div>
+              @if (charge.payUrl) {
+                <div hlmItemActions>
+                  <button hlmBtn size="sm" type="button" (click)="payCharge(charge)">Paga</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <!-- Actions -->
+    <div class="flex items-center justify-center gap-2">
+      <button hlmBtn variant="outline" type="button" (click)="refresh()">
+        <ng-icon name="lucideRefreshCw" size="16" />
+        Aggiorna
+      </button>
+      <button hlmBtn variant="ghost" type="button" (click)="logout()">
+        <ng-icon name="lucideLogOut" size="16" />
+        Esci
+      </button>
+    </div>
+  </div>
+</main>

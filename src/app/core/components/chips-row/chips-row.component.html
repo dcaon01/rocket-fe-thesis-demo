@@ -1,0 +1,17 @@
+<div #row class="flex flex-nowrap items-center gap-1.5 overflow-hidden">
+  @for (label of labels(); track $index) {
+    @if (visible().has($index)) {
+      <span hlmBadge variant="secondary" class="text-xs shrink-0">{{ label }}</span>
+    }
+  }
+  @if (visible().size < labels().length) {
+    <span hlmBadge variant="outline" class="text-xs shrink-0">+{{ labels().length - visible().size }}</span>
+  }
+</div>
+
+<!-- Every chip, out of sight: measured to know how many fit in the row -->
+<div #measure aria-hidden="true" class="absolute left-0 top-0 invisible pointer-events-none flex flex-nowrap gap-1.5">
+  @for (label of labels(); track $index) {
+    <span hlmBadge variant="secondary" class="text-xs shrink-0">{{ label }}</span>
+  }
+</div>

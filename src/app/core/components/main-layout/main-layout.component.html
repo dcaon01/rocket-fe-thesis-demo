@@ -1,0 +1,135 @@
+<!-- Shell: cream sidebar on the left, white page on the right -->
+<div hlmSidebarWrapper [sidebarWidth]="'256px'" class="h-svh! min-h-0! overflow-hidden">
+  <hlm-sidebar collapsible="none" class="shrink-0 border-r border-sidebar-border">
+    <div hlmSidebarHeader>
+      <ul hlmSidebarMenu>
+        <li hlmSidebarMenuItem>
+          <button type="button" hlmSidebarMenuButton size="lg" class="h-auto gap-2 hover:bg-transparent!" (click)="goToDashboard()">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+              <img src="keus-pittogramma-white.svg" alt="" width="16" height="16" />
+            </span>
+            <span class="flex flex-col gap-0.5 leading-none text-sidebar-foreground">
+              <span class="text-sm font-semibold">Rocket</span>
+              <span class="text-xs">Keus</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div hlmSidebarContent>
+      <div hlmSidebarGroup>
+        <div hlmSidebarGroupContent>
+          <ul hlmSidebarMenu>
+            @for (item of shownNavigationItems(); track item.label) {
+              @if (item.children && item.children.length > 0) {
+                <!-- Expandable menu items -->
+                @if (item.expandable) {
+                  <hlm-collapsible
+                      class="group/collapsible"
+                      [expanded]="openGroup() === item.label"
+                  >
+                    <button
+                        type="button"
+                        hlmSidebarMenuButton
+                        class="hover:bg-sidebar-border hover:text-sidebar-foreground data-[state=open]:hover:bg-sidebar-border data-[state=open]:hover:text-sidebar-foreground"
+                        [attr.aria-expanded]="openGroup() === item.label"
+                        (click)="openGroupByLabel(item.label)"
+                    >
+                      <ng-icon [name]="item.icon" />
+                      <span>{{ item.label }}</span>
+                      <ng-icon
+                          name="lucideChevronRight"
+                          class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                          hlm
+                      />
+                    </button>
+                    <hlm-collapsible-content>
+                      <ul hlmSidebarMenuSub>
+                        @for (subItem of item.children; track $index) {
+                          <li hlmSidebarMenuSubItem [routerLink]="getCompleteUrl(subItem)" routerLinkActive #rla="routerLinkActive" [routerLinkActiveOptions]="{ exact: false }">
+                            <a hlmSidebarMenuSubButton class="w-full hover:bg-sidebar-border hover:text-sidebar-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground" [isActive]="rla.isActive">
+                              <ng-icon [name]="subItem.icon" class="text-current" />
+                              <span>{{ subItem.label }}</span>
+                            </a>
+                          </li>
+                        }
+                      </ul>
+                    </hlm-collapsible-content>
+                  </hlm-collapsible>
+
+                <!-- Not expandable menu items -->
+                } @else {
+                  <li hlmSidebarMenuItem class="mb-2">
+                    <span hlmSidebarGroupLabel>{{ item.label }}</span>
+                    <ul hlmSidebarMenuSub>
+                      @for (subItem of item.children; track $index) {
+                        <li hlmSidebarMenuSubItem [routerLink]="getCompleteUrl(subItem)" routerLinkActive #rla="routerLinkActive" [title]="item.label" [routerLinkActiveOptions]="{ exact: false }">
+                          <a hlmSidebarMenuSubButton class="w-full hover:bg-sidebar-border hover:text-sidebar-foreground data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground" [isActive]="rla.isActive">
+                            <ng-icon [name]="subItem.icon" class="text-current" />
+                            <span>{{ subItem.label }}</span>
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  </li>
+                }
+
+              <!-- Simple menu items -->
+              } @else {
+                <li hlmSidebarMenuItem [routerLink]="getCompleteUrl(item)" routerLinkActive #rla="routerLinkActive" [title]="item.label" [routerLinkActiveOptions]="{ exact: false }">
+                  <a hlmSidebarMenuButton class="hover:bg-sidebar-border hover:text-sidebar-foreground data-[active=true]:font-normal data-[active=true]:hover:bg-sidebar-accent data-[active=true]:hover:text-sidebar-accent-foreground" [isActive]="rla.isActive">
+                    <ng-icon [name]="item.icon" />
+                    <span>{{ item.label }}</span>
+                  </a>
+                </li>
+              }
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div hlmSidebarFooter>
+      @if (currentProductId() || (currentResellerId() && !isReseller())) {
+        <ul hlmSidebarMenu>
+          @if (currentProductId()) {
+            <li hlmSidebarMenuItem>
+              <button hlmSidebarMenuButton class="text-muted-foreground hover:bg-sidebar-border hover:text-sidebar-foreground" (click)="goToProducts()">
+                <ng-icon name="lucideArrowLeft" />
+                <span>Torna ai prodotti</span>
+              </button>
+            </li>
+          }
+          @if (currentResellerId() && !isReseller()) {
+            <li hlmSidebarMenuItem>
+              <button hlmSidebarMenuButton class="text-muted-foreground hover:bg-sidebar-border hover:text-sidebar-foreground" (click)="goToResellers()">
+                <ng-icon name="lucideArrowLeft" />
+                <span>Torna ai rivenditori</span>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+
+      <rocket-user-menu [hasUnreadMessages]="hasUnreadMessages()" />
+    </div>
+  </hlm-sidebar>
+
+  <main hlmSidebarInset class="min-w-0 h-svh flex flex-col">
+    <rocket-topbar class="shrink-0" />
+
+    <!-- Page panel -->
+    <div class="rk-panel relative flex-1 min-h-0 overflow-hidden bg-background">
+      <div #pagePanel class="absolute inset-0 overflow-y-auto overflow-x-hidden p-6">
+        <router-outlet />
+      </div>
+
+      @if (loadingState()) {
+        <rocket-loading-overlay />
+      }
+    </div>
+  </main>
+</div>
+
+<hlm-toaster [position]="'bottom-right'" />
