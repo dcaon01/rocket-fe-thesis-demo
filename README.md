@@ -12,7 +12,7 @@ The other two parts of the platform:
 
 ## Demo accounts
 
-The demo holds fictional data: three products (O2, Genio, Pagai) with their plans, two resellers, ten customer companies, and orders in every state, from draft to closed, with the tenants, users, contracts and invoices they produced. Every account below uses the password `RocketDemo2026!`.
+The demo holds fictional data: three products (Nquadro, Genio, Pagai) with their plans, two resellers, ten customer companies, and orders in every state, from draft to closed, with the tenants, users, contracts and invoices they produced. Every account below uses the password `RocketDemo2026!`.
 
 | Email | Profile |
 |---|---|
