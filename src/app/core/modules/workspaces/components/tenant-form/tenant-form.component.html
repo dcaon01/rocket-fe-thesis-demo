@@ -26,8 +26,8 @@
             }
           </div>
 
-          <!-- Description -->
-          <div class="flex flex-col gap-2 flex-1 col-span-2">
+          <!-- Description: fills the rest of the first row -->
+          <div class="flex flex-col gap-2 flex-1 col-span-4">
             @if (isEditable()) {
               <label hlmLabel for="description">Descrizione</label>
               <input type="text" id="description" placeholder="Descrizione del tenant" hlmInput formControlName="description" autocomplete="off" />
@@ -67,10 +67,10 @@
           }
           -->
 
-          <!-- Status: next to the base data while creating, after the contract once the tenant exists -->
+          <!-- Status: on the row below name and description -->
           <ng-template #statusField>
             @if (isOnProduct()) {
-              <div class="flex flex-col gap-2">
+              <div class="flex flex-col gap-2 col-span-2">
                 <label hlmLabel for="status">Stato*</label>
                 <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="status" class="w-full">
                   <hlm-select-trigger class="w-full">
