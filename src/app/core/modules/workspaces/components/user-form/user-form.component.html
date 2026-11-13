@@ -1,0 +1,216 @@
+<form [formGroup]="userForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="steps.activeTab() === 'history' ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Informazioni di base -->
+      <div hlmTabsContent="info" class="animate-rk-rise">
+        <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+          <!-- Tenant -->
+          @if (!userData() && !fixedTenant()) {
+            <div class="flex flex-col gap-2 col-span-2">
+              <label hlmLabel for="tenantId">Tenant*</label>
+              <hlm-combobox formControlName="tenantId" [filter]="comboboxContainsFilter" [itemToString]="tenantOptionLabel" (searchChange)="tenants.search.set($event)">
+                <hlm-combobox-input placeholder="Cerca tenant" />
+                <ng-template hlmComboboxPortal>
+                  <hlm-combobox-content>
+                    <div hlmComboboxList>
+                      @for (option of tenants.options(); track option.value) {
+                        <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                      }
+                      <div hlmComboboxEmpty [class.flex!]="tenants.options().length === 0">Nessun tenant trovato</div>
+                    </div>
+                  </hlm-combobox-content>
+                </ng-template>
+              </hlm-combobox>
+            </div>
+          } @else {
+            <!-- The tenant is fixed once the user exists, or when the page chose it -->
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel>Tenant</label>
+              @if (userForm.controls.tenantName.value; as tenantName) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ tenantName }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            </div>
+          }
+
+          <!-- Email: the login on the product, fixed once the user exists -->
+          <div class="flex flex-col gap-2 flex-1 col-span-2">
+            @if (!userData()) {
+              <label hlmLabel for="email">Email*</label>
+              <input type="email" id="email" placeholder="Email dell'utente" hlmInput formControlName="email" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Email</label>
+              @if (userForm.controls.email.value; as email) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ email }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Name -->
+          <div class="flex flex-col gap-2 flex-1 col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="name">Nome*</label>
+              <input type="text" id="name" placeholder="Nome dell'utente" hlmInput formControlName="name" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Nome</label>
+              @if (userForm.controls.name.value; as name) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ name }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Surname -->
+          <div class="flex flex-col gap-2 flex-1 col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="surname">Cognome</label>
+              <input type="text" id="surname" placeholder="Cognome dell'utente" hlmInput formControlName="surname" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Cognome</label>
+              @if (userForm.controls.surname.value; as surname) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ surname }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Account type: hidden for now, every account is a client. Shown again with the professional accounts.
+          @if (userData()) {
+            <div class="flex flex-col gap-2 col-span-2 justify-end pb-2">
+              <label hlmLabel>Tipo account</label>
+              <span hlmBadge variant="outline" class="w-fit">{{ userData()?.accountType | planAudience }}</span>
+            </div>
+          } @else {
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="accountType">Tipo account*</label>
+              <brn-select class="inline-block" placeholder="Seleziona un tipo" formControlName="accountType" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  <hlm-option value="CLIENT">{{ 'CLIENT' | planAudience }}</hlm-option>
+                  <hlm-option value="PROFESSIONAL">{{ 'PROFESSIONAL' | planAudience }}</hlm-option>
+                </hlm-select-content>
+              </brn-select>
+            </div>
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="accountType">Tipo account</label>
+              <input type="text" id="accountType" hlmInput [value]="'CLIENT' | planAudience" disabled />
+            </div>
+          }
+          -->
+
+          <!-- Cognito roles -->
+          @if (cognitoRoles().length > 0) {
+            <div class="flex flex-col gap-2 col-span-2">
+              @if (isEditable()) {
+                <label hlmLabel for="roles">Ruoli Cognito*</label>
+                <rocket-multi-select formControlName="roles" [options]="cognitoRoles()" title="Ruoli Cognito" inputId="roles" />
+              } @else {
+                <label hlmLabel>Ruoli Cognito</label>
+                @if (userForm.controls.roles.value?.length) {
+                  <div class="min-h-9 flex flex-wrap items-center gap-2">
+                    @for (role of userForm.controls.roles.value; track role) {
+                      <span hlmBadge variant="secondary" class="text-xs">{{ role }}</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+          }
+
+          @if (isOnProduct()) {
+            <!-- Status -->
+            <div class="flex flex-col gap-2 col-span-2">
+              <label hlmLabel for="status">Stato</label>
+              <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="status" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (status of userStatuses; track status) {
+                    <hlm-option [value]="status">{{ status | userStatus }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            </div>
+          }
+
+          <!-- Referent -->
+          @if (isEditable()) {
+            <div class="flex flex-col gap-4 col-span-2">
+              <label hlmLabel for="referent">Referente</label>
+              <hlm-switch id="referent" formControlName="referent" />
+            </div>
+          } @else {
+            <div class="flex flex-col gap-2 col-span-2">
+              <label hlmLabel>Referente</label>
+              <span class="text-base font-medium min-h-9 flex items-center">{{ userForm.controls.referent.value ? 'Sì' : 'No' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Struttura utente -->
+      @if (isFormReady()) {
+        <div hlmTabsContent="structure" class="animate-rk-rise">
+          <rocket-structure-fields [group]="userForm.controls.data" [structure]="userStructure() ?? []" [editable]="isEditable()" [existing]="!!userData()" />
+        </div>
+      }
+
+      <!-- Campi custom Cognito -->
+      @if (hasCognitoFields()) {
+        <div hlmTabsContent="cognito" class="animate-rk-rise">
+          <div formGroupName="customAttributes" class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+            @for (field of cognitoCustomAttributes(); track $index) {
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                @if (isEditable()) {
+                  <label hlmLabel [for]="field">{{ field }}</label>
+                  <input
+                    type="text"
+                    [id]="field"
+                    [placeholder]="field"
+                    hlmInput
+                    [formControlName]="field"
+                    autocomplete="off"
+                  />
+                } @else {
+                  <label hlmLabel>{{ field }}</label>
+                  @if (userForm.controls.customAttributes.get(field)?.value; as v) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ v }}</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Storico -->
+      @if (userData()) {
+        <div hlmTabsContent="history" class="animate-rk-rise">
+          <rocket-operation-history [operations]="operations()" />
+        </div>
+      }
+      @if (isEditable() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

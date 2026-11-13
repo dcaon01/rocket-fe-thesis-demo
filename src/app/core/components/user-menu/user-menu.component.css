@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.rk-unread-dot {
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--chart-1);
+  box-shadow: 0 0 0 2px var(--sidebar);
+}
+.rk-unread-dot--inline {
+  box-shadow: none;
+}

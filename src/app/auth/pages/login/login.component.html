@@ -1,0 +1,61 @@
+<main class="h-svh w-full flex flex-col md:flex-row overflow-hidden">
+  <!-- Left: form panel -->
+  <section class="flex-1 flex flex-col gap-4 bg-background p-10 overflow-y-auto">
+    <!-- Product name -->
+    <div class="flex items-center justify-center md:justify-start gap-2">
+      <span class="flex size-6 items-center justify-center rounded-md border bg-card">
+        <img src="keus-pittogramma.svg" alt="" width="16" height="16" />
+      </span>
+      <span class="text-sm font-semibold leading-none">Rocket</span>
+    </div>
+
+    <div class="flex-1 flex items-center justify-center">
+      <div class="w-full max-w-[374px] flex flex-col gap-6">
+        <!-- Heading -->
+        <div class="flex flex-col gap-2 text-center">
+          <h2 class="text-2xl font-semibold">Accedi a Rocket</h2>
+          <p class="text-sm text-muted-foreground">Inserisci le credenziali per accedere alla tua area</p>
+        </div>
+
+        <!-- Form -->
+        <form [formGroup]="authForm" (ngSubmit)="login()" class="flex flex-col gap-6">
+          <!-- Email -->
+          <div class="grid gap-3">
+            <label hlmLabel for="email">Email</label>
+            <input type="email" id="email" placeholder="nome@azienda.it" required hlmInput formControlName="email" autocomplete="off" />
+          </div>
+
+          <!-- Password -->
+          <div class="grid gap-3">
+            <label hlmLabel for="password">Password</label>
+            <hlm-input-group>
+              <input [type]="showPassword() ? 'text' : 'password'" id="password" placeholder="Password" required hlmInputGroupInput formControlName="password" autocomplete="off" />
+              <hlm-input-group-addon align="inline-end">
+                <button hlmInputGroupButton size="icon-xs" type="button" [hlmTooltip]="showPassword() ? 'Nascondi password' : 'Mostra password'" [attr.aria-label]="showPassword() ? 'Nascondi password' : 'Mostra password'" (click)="showPassword.set(!showPassword())">
+                  <ng-icon [name]="showPassword() ? 'lucideEyeOff' : 'lucideEye'" size="16" />
+                </button>
+              </hlm-input-group-addon>
+            </hlm-input-group>
+          </div>
+
+          <!-- Errors -->
+          @if (errorMessage()) {
+            <p class="text-destructive text-sm">{{ errorMessage() }}</p>
+          }
+
+          <!-- Submit -->
+          <button hlmBtn type="submit" class="w-full" [disabled]="authForm.invalid || isLoading()">
+            @if (isLoading()) {
+              <ng-icon name="lucideLoaderCircle" class="animate-spin" />
+            } @else {
+              Accedi
+            }
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Right: brand panel, dark with the Keus glows -->
+  <rocket-auth-brand-panel class="hidden md:flex flex-1" />
+</main>

@@ -1,0 +1,90 @@
+@if (hasData()) {
+  <div class="flex flex-col gap-10">
+    <!-- Levers -->
+    <div class="flex flex-col gap-6">
+      <div class="grid grid-cols-4 gap-6">
+        @for (card of cards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <p class="text-2xl font-bold">{{ displayValues[i] }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="charts-row">
+        @if (shareLineOption) {
+          <div hlmCard class="chart-card equal-chart-card">
+            <h3 class="chart-title">Quota di aziende conformi (%)</h3>
+            <div class="chart-container">
+              <div echarts [options]="shareLineOption" class="w-full h-full"></div>
+            </div>
+          </div>
+        }
+
+        @if (riskBarOption) {
+          <div hlmCard class="chart-card equal-chart-card">
+            <h3 class="chart-title">Aziende critiche</h3>
+            <div class="chart-container">
+              <div echarts [options]="riskBarOption" class="w-full h-full"></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Outcomes -->
+    <div class="flex flex-col gap-6">
+      <h2 class="text-xl font-semibold tracking-tight text-foreground">Esiti del periodo</h2>
+
+      <!-- Every product: one bar per lever split into its outcomes; a product: the counts as a table -->
+      @if (outcomeBarOption) {
+        <div hlmCard class="chart-card">
+          <div class="chart-container">
+            <div echarts [options]="outcomeBarOption" class="w-full h-full"></div>
+          </div>
+        </div>
+      } @else {
+        <div hlmTableContainer>
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr class="bg-background hover:bg-background">
+                <th hlmTh>Leva</th>
+                <th hlmTh class="text-right">Conformi</th>
+                <th hlmTh class="text-right">In attenzione</th>
+                <th hlmTh class="text-right">Non conformi</th>
+                <th hlmTh class="text-right">Non valutabili</th>
+                <th hlmTh class="text-right">In osservazione</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (row of outcomeRows(); track $index) {
+                <tr hlmTr>
+                  <td hlmTd>{{ row.lever | mixpanelLever }}</td>
+                  <td hlmTd class="text-right">{{ row.compliant }}</td>
+                  <td hlmTd class="text-right">{{ row.atRisk }}</td>
+                  <td hlmTd class="text-right">{{ row.failing }}</td>
+                  <td hlmTd class="text-right">{{ row.notAssessable }}</td>
+                  <td hlmTd class="text-right">{{ row.observed }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+} @else if (isLoading()) {
+  <div class="grid grid-cols-4 gap-6">
+    <rocket-kpi-skeletons [count]="4" />
+  </div>
+} @else {
+  <hlm-empty>
+    <hlm-empty-header>
+      <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+      <p hlmEmptyDescription>Nessun prodotto ha regole Mixpanel nel periodo.</p>
+    </hlm-empty-header>
+  </hlm-empty>
+}

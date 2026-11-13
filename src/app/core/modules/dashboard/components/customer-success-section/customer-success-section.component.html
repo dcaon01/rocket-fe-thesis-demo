@@ -1,0 +1,164 @@
+<div class="flex flex-col gap-6">
+  <!-- Churn -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Abbandono</h2>
+
+    <div class="grid grid-cols-4 gap-6">
+      @if (isLoading() && churnCards.length === 0) {
+        <rocket-kpi-skeletons [count]="4" />
+      }
+      @for (card of churnCards; track card.name; let i = $index) {
+        <div hlmCard class="rk-kpi px-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium">{{ card.name }}</p>
+            <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+          </div>
+          <p class="text-2xl font-bold">{{ churnDisplayValues[i] }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="charts-row">
+      <div hlmCard class="chart-card line-chart-card">
+        <h3 class="chart-title">Andamento del tasso di abbandono (%)</h3>
+        <div class="chart-container">
+          @if (isLoading() && !churnLineOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (churnLineOption) {
+            <div echarts [options]="churnLineOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+
+      <div hlmCard class="chart-card pie-chart-card">
+        <h3 class="chart-title">{{ productId() ? 'Cessazioni per canale' : 'Cessazioni per prodotto' }}</h3>
+        <div class="chart-container">
+          @if (isLoading() && !terminationsSplitOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (terminationsSplitOption) {
+            <div echarts [options]="terminationsSplitOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activation -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Attivazione</h2>
+
+    <div class="grid grid-cols-4 gap-6">
+      @if (isLoading() && activationCards.length === 0) {
+        <rocket-kpi-skeletons [count]="4" />
+      }
+      @for (card of activationCards; track card.name; let i = $index) {
+        <div hlmCard class="rk-kpi px-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium">{{ card.name }}</p>
+            <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+          </div>
+          <p class="text-2xl font-bold">{{ activationDisplayValues[i] }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="charts-row">
+      <div hlmCard class="chart-card line-chart-card">
+        <h3 class="chart-title">Tempo medio di attivazione (giorni)</h3>
+        <div class="chart-container">
+          @if (isLoading() && !activationLineOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (activationLineOption) {
+            <div echarts [options]="activationLineOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Support -->
+  @if (hasSupport()) {
+    <div class="flex flex-col gap-6">
+      <h2 class="text-xl font-semibold tracking-tight text-foreground">Assistenza</h2>
+
+      <div class="grid grid-cols-4 gap-6">
+        @if (isLoading() && supportCards.length === 0) {
+          <rocket-kpi-skeletons [count]="4" />
+        }
+        @for (card of supportCards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <p class="text-2xl font-bold">{{ supportDisplayValues[i] }}</p>
+          </div>
+        }
+      </div>
+
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <h3 class="chart-title">Conversazioni aperte e chiuse</h3>
+          <div class="chart-container">
+            @if (isLoading() && !supportLineOption) {
+              <hlm-skeleton class="size-full" />
+            }
+            @if (supportLineOption) {
+              <div echarts [options]="supportLineOption" class="w-full h-full"></div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Follow-ups -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Clienti da seguire</h2>
+
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Azienda</th>
+            @if (!productId()) {
+              <th hlmTh>Prodotto</th>
+            }
+            <th hlmTh>Venduto da</th>
+            <th hlmTh>Motivo</th>
+            <th hlmTh>Data</th>
+          </tr>
+        </thead>
+        @if (followUps().length > 0) {
+          <tbody hlmTBody>
+            @for (followUp of followUps(); track $index) {
+              <tr hlmTr class="cursor-pointer" [routerLink]="['/companies/edit', followUp.companyId]">
+                <td hlmTd>{{ followUp.companyName }}</td>
+                @if (!productId()) {
+                  <td hlmTd>{{ productNames().get(followUp.productId) ?? followUp.productId }}</td>
+                }
+                <td hlmTd>{{ followUp.resellerCode ?? 'Diretto' }}</td>
+                <td hlmTd>
+                  <span hlmBadge variant="outline" rocketCustomerFollowUpReason [reason]="followUp.reason">{{ followUp.reason | customerFollowUpReason }}</span>
+                </td>
+                <td hlmTd>{{ followUp.date | date:'dd/MM/yyyy' }}</td>
+              </tr>
+            }
+          </tbody>
+        } @else if (!isLoading()) {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun cliente da seguire.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+</div>

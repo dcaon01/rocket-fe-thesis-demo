@@ -1,0 +1,232 @@
+<form [formGroup]="tenantForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="steps.activeTab() === 'history' ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Informazioni di base (include also association data) -->
+      <div hlmTabsContent="info" class="animate-rk-rise">
+        <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+          <!-- Name -->
+          <div class="flex flex-col gap-2 flex-1 col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="name">Nome*</label>
+              <input type="text" id="name" placeholder="Nome del tenant" hlmInput formControlName="name" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Nome</label>
+              @if (tenantForm.controls.name.value; as name) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ name }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Description: fills the rest of the first row -->
+          <div class="flex flex-col gap-2 flex-1 col-span-4">
+            @if (isEditable()) {
+              <label hlmLabel for="description">Descrizione</label>
+              <input type="text" id="description" placeholder="Descrizione del tenant" hlmInput formControlName="description" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Descrizione</label>
+              @if (tenantForm.controls.description.value; as description) {
+                <p class="text-base leading-relaxed whitespace-pre-line">{{ description }}</p>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Account type: hidden for now, every account is a client. Shown again with the professional accounts.
+          @if (tenantData()) {
+            <div class="flex flex-col gap-2 col-span-2 justify-end pb-2">
+              <label hlmLabel>Tipo account</label>
+              <span hlmBadge variant="outline" class="w-fit">{{ tenantData()?.accountType | planAudience }}</span>
+            </div>
+          } @else {
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="accountType">Tipo account*</label>
+              <brn-select class="inline-block" placeholder="Seleziona un tipo" formControlName="accountType" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  <hlm-option value="CLIENT">{{ 'CLIENT' | planAudience }}</hlm-option>
+                  <hlm-option value="PROFESSIONAL">{{ 'PROFESSIONAL' | planAudience }}</hlm-option>
+                </hlm-select-content>
+              </brn-select>
+            </div>
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="accountType">Tipo account</label>
+              <input type="text" id="accountType" hlmInput [value]="'CLIENT' | planAudience" disabled />
+            </div>
+          }
+          -->
+
+          <!-- Status: on the row below name and description -->
+          <ng-template #statusField>
+            @if (isOnProduct()) {
+              <div class="flex flex-col gap-2 col-span-2">
+                <label hlmLabel for="status">Stato*</label>
+                <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="status" class="w-full">
+                  <hlm-select-trigger class="w-full">
+                    <hlm-select-value />
+                  </hlm-select-trigger>
+                  <hlm-select-content>
+                    @for (status of tenantStatus; track status) {
+                      <hlm-option [value]="status">{{ status | tenantStatus }}</hlm-option>
+                    }
+                  </hlm-select-content>
+                </brn-select>
+              </div>
+            }
+          </ng-template>
+          @if (!tenantData()) {
+            <ng-container *ngTemplateOutlet="statusField" />
+          }
+
+          <!-- Association -->
+          @if (!tenantData()) {
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="origin">Origine*</label>
+              <brn-select class="inline-block w-full" formControlName="origin">
+                <hlm-select-trigger class="w-full" id="origin">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (origin of tenantOrigins; track origin.value) {
+                    <hlm-option [value]="origin.value">{{ origin.label }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            </div>
+
+            @if (isOrderLine()) {
+              <ng-container *ngTemplateOutlet="lineCombobox; context: { label: 'Riga d\'ordine*' }" />
+            } @else {
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                <label hlmLabel for="trialId">Trial*</label>
+                <hlm-combobox formControlName="trialId" [filter]="comboboxContainsFilter" [itemToString]="trialOptionLabel" (searchChange)="trials.search.set($event)">
+                  <hlm-combobox-input placeholder="Cerca trial" />
+                  <ng-template hlmComboboxPortal>
+                    <hlm-combobox-content>
+                      <div hlmComboboxList>
+                        @for (option of trials.options(); track option.value) {
+                          <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                        }
+                        <div hlmComboboxEmpty [class.flex!]="trials.options().length === 0">Nessun trial trovato</div>
+                      </div>
+                    </hlm-combobox-content>
+                  </ng-template>
+                </hlm-combobox>
+              </div>
+            }
+          } @else {
+            <!-- Trial and contract are fixed once the tenant exists, so always shown as values -->
+            @if (tenantData()?.trialId) {
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel>Trial</label>
+                @if (tenantForm.controls.trialEmail.value; as trialEmail) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ trialEmail }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              </div>
+            }
+            @if (tenantData()?.contractId) {
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                <div class="w-full flex justify-between items-center">
+                  <label hlmLabel>Contratto</label>
+                  @if (canOpenContract()) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground" hlmTooltip="Apri contratto" aria-label="Apri contratto" (click)="goToContract()"><ng-icon name="lucideExternalLink" size="16" /></button>
+                  }
+                </div>
+                @if (tenantForm.controls.contractCode.value; as contractCode) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ contractCode }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              </div>
+            }
+            <ng-container *ngTemplateOutlet="statusField" />
+            @if (canTakeLine()) {
+              <ng-container *ngTemplateOutlet="lineCombobox; context: { label: 'Nuova riga d\'ordine' }" />
+            }
+          }
+
+          <!-- Order line combobox, shared by the creation and the handover of a tenant -->
+          <ng-template #lineCombobox let-label="label">
+            <div class="flex flex-col gap-2 flex-1 col-span-2">
+              <label hlmLabel for="orderId">{{ label }}</label>
+              <hlm-combobox formControlName="orderId" [filter]="comboboxContainsFilter" [itemToString]="lineOptionLabel" (searchChange)="lines.search.set($event)">
+                <hlm-combobox-input id="orderId" placeholder="Cerca per ordine o azienda" />
+                <ng-template hlmComboboxPortal>
+                  <hlm-combobox-content>
+                    <div hlmComboboxList>
+                      @for (option of lines.options(); track option.value) {
+                        <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                      }
+                      <div hlmComboboxEmpty [class.flex!]="lines.options().length === 0">Nessuna riga da erogare</div>
+                    </div>
+                  </hlm-combobox-content>
+                </ng-template>
+              </hlm-combobox>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Struttura tenant -->
+      @if (isFormReady()) {
+        <div hlmTabsContent="structure" class="animate-rk-rise">
+          <rocket-structure-fields [group]="tenantForm.controls.data" [structure]="tenantStructure()" [editable]="isEditable()" [existing]="!!tenantData()" />
+        </div>
+      }
+
+      <!-- Referente -->
+      @if (!tenantData() && isOrderLine()) {
+        <div hlmTabsContent="referent" class="animate-rk-rise" formGroupName="referent">
+          <div class="w-full flex flex-col gap-6">
+            <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                <label hlmLabel for="referent-email">Email*</label>
+                <input type="email" id="referent-email" placeholder="Email del referente" hlmInput formControlName="email" autocomplete="off" />
+              </div>
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                <label hlmLabel for="referent-name">Nome</label>
+                <input type="text" id="referent-name" placeholder="Nome" hlmInput formControlName="name" autocomplete="off" />
+              </div>
+              <div class="flex flex-col gap-2 flex-1 col-span-2">
+                <label hlmLabel for="referent-surname">Cognome</label>
+                <input type="text" id="referent-surname" placeholder="Cognome" hlmInput formControlName="surname" autocomplete="off" />
+              </div>
+              @if (roles().length > 0) {
+                <div class="flex flex-col gap-2 col-span-6">
+                  <label hlmLabel for="referent-roles">Ruoli*</label>
+                  <rocket-multi-select formControlName="roles" [options]="roles()" title="Ruoli" inputId="referent-roles" />
+                </div>
+              }
+            </div>
+            @if (product(); as product) {
+              <rocket-structure-fields [group]="tenantForm.controls.referent.controls.data" [structure]="product.userStructure" idPrefix="referent-" />
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Storico -->
+      @if (tenantData()) {
+        <div hlmTabsContent="history" class="animate-rk-rise">
+          <rocket-operation-history [operations]="operations()" />
+        </div>
+      }
+      @if (isEditable() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

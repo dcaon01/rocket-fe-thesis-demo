@@ -1,0 +1,146 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Gestione rivenditori" description="Gestisci la rete di vendita, con tipologia e contratto di ogni rivenditore.">
+    @if (canManageTiers()) {
+      <button
+        hlmBtn
+        size="sm"
+        variant="outline"
+        (click)="goToTiers()"
+      >
+        Canoni
+        <ng-icon hlm name="lucideTags" size="16" />
+      </button>
+    }
+    @if (canCreate()) {
+      <button
+        hlmBtn
+        size="sm"
+        (click)="goToCreateReseller()"
+      >
+        Crea rivenditore
+        <ng-icon hlm name="lucidePlus" size="16" />
+      </button>
+    }
+  </rocket-page-header>
+
+  <!-- Filters -->
+  <div class="w-full flex">
+    <form [formGroup]="resellersFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+      <!-- Company name -->
+      <div class="flex flex-col gap-2 flex-1 max-w-80">
+        <label hlmLabel for="companyName">Nome azienda</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+          <input type="text" id="companyName" placeholder="Nome azienda del rivenditore" hlmInputGroupInput formControlName="companyName" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Email -->
+      <div class="flex flex-col gap-2 flex-1 max-w-80">
+        <label hlmLabel for="email">Email</label>
+        <hlm-input-group>
+          <hlm-input-group-addon><ng-icon name="lucideMail" size="16" /></hlm-input-group-addon>
+          <input type="text" id="email" placeholder="Email del rivenditore" hlmInputGroupInput formControlName="email" autocomplete="off" />
+        </hlm-input-group>
+      </div>
+
+      <!-- Status -->
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="status">Stato</label>
+        <rocket-multi-select-filter buttonId="status" formControlName="status" [options]="statusOptions" />
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-end">
+        <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+        @if (isFiltered()) {
+          <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+        }
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="w-full flex flex-col">
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh class="w-16"></th>
+            <th hlmTh>Codice</th>
+            <th hlmTh>Nome azienda</th>
+            <th hlmTh>Email</th>
+            <th hlmTh>Telefono</th>
+            <th hlmTh>Stato</th>
+            <th hlmTh></th>
+          </tr>
+        </thead>
+        @if (pager.items().length > 0) {
+          <tbody hlmTBody>
+            @for (reseller of pager.items(); track reseller.id) {
+              <tr hlmTr>
+                <td hlmTd>
+                  <hlm-avatar class="border">
+                    @if (getLogoUrl(reseller.logoS3Key)) {
+                      <img [src]="getLogoUrl(reseller.logoS3Key)" [alt]="reseller.companyName" hlmAvatarImage class="object-contain p-0.5 bg-background" />
+                    }
+                    <span class="text-white bg-primary text-xs" hlmAvatarFallback>{{ getInitials(reseller.companyName) }}</span>
+                  </hlm-avatar>
+                </td>
+                <td hlmTd>{{ reseller.code }}</td>
+                <td hlmTd>{{ reseller.companyName }}</td>
+                <td hlmTd>{{ reseller.email }}</td>
+                <td hlmTd>{{ reseller.phoneNumber || '-' }}</td>
+                <td hlmTd>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span hlmBadge variant="outline" rocketResellerStatus [status]="reseller.status">{{ getStatus(reseller.status) }}</span>
+                    @if (reseller.overdue) {
+                      <span hlmBadge variant="outline" [class]="overdueBadgeClass">Insolvente{{ reseller.overdueSince ? ' dal ' + (reseller.overdueSince | date:'dd/MM/yyyy') : '' }}</span>
+                    }
+                  </div>
+                </td>
+                <td hlmTd class="text-right flex justify-end items-center gap-1">
+                  @if (canDelete()) {
+                    <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" hlmTooltip="Elimina rivenditore" aria-label="Elimina rivenditore" (click)="openDeleteResellerDialog(reseller.id)"><ng-icon name="lucideTrash2" size="16" /></button>
+                  }
+                  <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Modifica rivenditore" aria-label="Modifica rivenditore" (click)="goToEditReseller(reseller.id)"><ng-icon name="lucidePencil" size="16" /></button>
+                  <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Apri workspace" aria-label="Apri workspace" (click)="goToResellerWorkspace(reseller.id)"><ng-icon name="lucideFolderOpen" size="16" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun rivenditore trovato.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <rocket-table-pagination [pager]="pager" />
+</div>
+
+<!-- Delete dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare rivenditore?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare il rivenditore <strong>{{ selectedReseller?.companyName }}</strong>?<br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteResellerDialog()" [disabled]="isLoading()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteReseller()" [disabled]="isLoading()">{{ isLoading() ? 'Caricamento...' : 'Conferma' }}</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

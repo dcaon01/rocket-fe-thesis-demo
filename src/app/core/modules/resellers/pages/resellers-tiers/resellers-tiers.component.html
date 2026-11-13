@@ -1,0 +1,98 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header
+    headerTitle="Canoni" description="Imposta canone annuale e sconti di ogni tipologia: valgono per i contratti aperti da qui in poi."
+  />
+
+  <!-- Tiers -->
+  <hlm-tabs [tab]="activeTab()" (tabActivated)="onTabActivated($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: tiers -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <hlm-tabs-list variant="line" class="rk-steps">
+        @for (tier of tiers; track tier.id) {
+          <button
+            [hlmTabsTrigger]="tier.id"
+            class="rk-step"
+          >
+            <span class="rk-step__dot"><ng-icon [name]="tier.icon" size="15" /></span>
+            <span class="truncate">{{ tier.label }}</span>
+            @if (tierForms[tier.id].dirty) {
+              <span class="ml-auto size-1.5 shrink-0 rounded-full bg-primary" title="Modifiche non salvate"></span>
+            }
+          </button>
+        }
+      </hlm-tabs-list>
+    </aside>
+
+
+    <!-- Right content -->
+    <div class="flex-1 min-w-0 flex flex-col gap-6">
+      @for (tier of tiers; track tier.id) {
+        <div [hlmTabsContent]="tier.id" [formGroup]="tierForms[tier.id]" class="flex flex-col gap-6 animate-rk-rise">
+          <!-- Tier header -->
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-medium">Canone {{ tier.label }}</h2>
+            <button
+              hlmBtn
+              size="sm"
+              [disabled]="tierForms[tier.id].invalid || tierForms[tier.id].pristine"
+              (click)="saveTier(tier.id)"
+            >
+              Salva
+              <ng-icon hlm name="lucideSave" size="16" />
+            </button>
+          </div>
+
+          <!-- Fee -->
+          <section hlmCard class="rk-step-panel flex flex-col">
+            <h3 class="text-base font-semibold text-foreground">Canone</h3>
+            <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8">
+              <!-- First year fee -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-firstYearFee'">Primo anno (€)*</label>
+                <input rocketMoneyInput [id]="tier.id + '-firstYearFee'" placeholder="Es. 1500" hlmInput formControlName="firstYearFee" />
+              </div>
+
+              <!-- Second year fee -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-secondYearFee'">Secondo anno (€)*</label>
+                <input rocketMoneyInput [id]="tier.id + '-secondYearFee'" placeholder="Es. 2000" hlmInput formControlName="secondYearFee" />
+              </div>
+
+              <!-- Ongoing fee -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-ongoingFee'">Dal terzo anno (€)*</label>
+                <input rocketMoneyInput [id]="tier.id + '-ongoingFee'" placeholder="Es. 2500" hlmInput formControlName="ongoingFee" />
+              </div>
+            </div>
+          </section>
+
+          <!-- Discounts -->
+          <section hlmCard class="rk-step-panel flex flex-col">
+            <h3 class="text-base font-semibold text-foreground">Sconti</h3>
+            <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8">
+              <!-- Activation discount -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-activationDiscountPercent'">Sconto attivazione (%)*</label>
+                <input type="number" [id]="tier.id + '-activationDiscountPercent'" placeholder="0-100" hlmInput formControlName="activationDiscountPercent" min="0" max="100" autocomplete="off" />
+              </div>
+
+              <!-- Subscription discount -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-subscriptionDiscountPercent'">Sconto canone (%)*</label>
+                <input type="number" [id]="tier.id + '-subscriptionDiscountPercent'" placeholder="0-100" hlmInput formControlName="subscriptionDiscountPercent" min="0" max="100" autocomplete="off" />
+              </div>
+
+              <!-- Customization discount -->
+              <div class="flex flex-col gap-2 flex-1">
+                <label hlmLabel [for]="tier.id + '-customizationDiscountPercent'">Sconto personalizzazioni (%)*</label>
+                <input type="number" [id]="tier.id + '-customizationDiscountPercent'" placeholder="0-100" hlmInput formControlName="customizationDiscountPercent" min="0" max="100" autocomplete="off" />
+              </div>
+            </div>
+          </section>
+        </div>
+      }
+      <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+    </div>
+  </hlm-tabs>
+</div>

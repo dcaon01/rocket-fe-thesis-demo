@@ -1,0 +1,136 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <h2 class="text-xl font-semibold tracking-tight text-foreground">Da fare</h2>
+
+  <!-- Orders cards -->
+  <div class="grid grid-cols-4 gap-6">
+    @if (isLoading() && orderCards.length === 0) {
+      <rocket-kpi-skeletons [count]="3" />
+    }
+    @for (card of orderCards; track card.name; let i = $index) {
+      <div hlmCard class="rk-kpi px-6">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-medium">{{ card.name }}</p>
+          <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+        </div>
+        <p class="text-2xl font-bold">{{ orderDisplayValues[i] }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- Renewals -->
+  <div class="flex flex-col gap-3">
+    <h3 class="text-lg font-semibold tracking-tight text-foreground">Rinnovi nei prossimi 90 giorni</h3>
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Azienda</th>
+            <th hlmTh>Prodotto</th>
+            <th hlmTh>Rinnovo</th>
+          </tr>
+        </thead>
+        @if (worklist()?.renewals?.length) {
+          <tbody hlmTBody>
+            @for (renewal of worklist()?.renewals; track renewal.contractId) {
+              <tr hlmTr [class.cursor-pointer]="canOpenCompanies()" [routerLink]="canOpenCompanies() ? companyUrl(renewal.companyId!) : null">
+                <td hlmTd>{{ renewal.companyName }}</td>
+                <td hlmTd>{{ productNames().get(renewal.productId) ?? renewal.productId }}</td>
+                <td hlmTd>{{ renewal.renewalDate | date:'dd/MM/yyyy' }}</td>
+              </tr>
+            }
+          </tbody>
+        } @else if (!isLoading()) {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun rinnovo nei prossimi 90 giorni.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Risks -->
+  <div class="flex flex-col gap-3">
+    <h3 class="text-lg font-semibold tracking-tight text-foreground">Clienti a rischio</h3>
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Azienda</th>
+            <th hlmTh>Prodotto</th>
+            <th hlmTh>Motivo</th>
+            <th hlmTh>Data</th>
+          </tr>
+        </thead>
+        @if (risks().length > 0) {
+          <tbody hlmTBody>
+            @for (risk of risks(); track $index) {
+              <tr hlmTr [class.cursor-pointer]="risk.companyId && canOpenCompanies()" [routerLink]="risk.companyId && canOpenCompanies() ? companyUrl(risk.companyId!) : null">
+                <td hlmTd>{{ risk.name }}</td>
+                <td hlmTd>{{ productNames().get(risk.productId) ?? risk.productId }}</td>
+                <td hlmTd>
+                  <span hlmBadge variant="outline" rocketCustomerFollowUpReason [reason]="risk.reason">{{ risk.reason | customerFollowUpReason }}</span>
+                </td>
+                <td hlmTd>{{ risk.date ? (risk.date | date:'dd/MM/yyyy') : '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        } @else if (!isLoading()) {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessun cliente a rischio.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+
+  <!-- Opportunities -->
+  <div class="flex flex-col gap-3">
+    <h3 class="text-lg font-semibold tracking-tight text-foreground">Opportunità di ampliamento</h3>
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Azienda</th>
+            <th hlmTh>Prodotto</th>
+            <th hlmTh>Opportunità</th>
+            <th hlmTh>Dettaglio</th>
+          </tr>
+        </thead>
+        @if (worklist()?.opportunities?.length) {
+          <tbody hlmTBody>
+            @for (opportunity of worklist()?.opportunities; track $index) {
+              <tr hlmTr [class.cursor-pointer]="canOpenCompanies()" [routerLink]="canOpenCompanies() ? companyUrl(opportunity.companyId!) : null">
+                <td hlmTd>{{ opportunity.companyName }}</td>
+                <td hlmTd>{{ productNames().get(opportunity.productId) ?? opportunity.productId }}</td>
+                <td hlmTd>
+                  <span hlmBadge variant="outline">{{ opportunity.reason | resellerOpportunityReason }}</span>
+                </td>
+                <td hlmTd>{{ opportunityDetail(opportunity) }}</td>
+              </tr>
+            }
+          </tbody>
+        } @else if (!isLoading()) {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessuna opportunità di ampliamento.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+</div>

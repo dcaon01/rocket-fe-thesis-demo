@@ -1,0 +1,191 @@
+<form [formGroup]="chargeForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs" [steps]="steps" />
+    </aside>
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6">
+      <!-- Item -->
+      <div hlmTabsContent="voce" class="flex flex-col gap-6 animate-rk-rise">
+        <div class="flex flex-col gap-1">
+          <h2 hlmCardTitle class="text-lg font-semibold">Voce</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          <!-- Customer -->
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            @if (isIdentityEditable()) {
+              <label hlmLabel for="companyId">Cliente*</label>
+              <hlm-combobox formControlName="companyId" [filter]="comboboxContainsFilter" [itemToString]="companyLabel" (searchChange)="companies.search.set($event)">
+                <hlm-combobox-input id="companyId" placeholder="Cerca per ragione sociale" />
+                <ng-template hlmComboboxPortal>
+                  <hlm-combobox-content>
+                    <div hlmComboboxList>
+                      @for (option of companies.options(); track option.value) {
+                        <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                      }
+                      <div hlmComboboxEmpty [class.flex!]="companies.options().length === 0">Nessun cliente trovato</div>
+                    </div>
+                  </hlm-combobox-content>
+                </ng-template>
+              </hlm-combobox>
+            } @else {
+              <label hlmLabel>Cliente</label>
+              @if (chargeForm.controls.companyId.value && companyLabel(chargeForm.controls.companyId.value); as company) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ company }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Description -->
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="description">Descrizione*</label>
+              <textarea hlmTextarea id="description" formControlName="description" placeholder="Formazione del personale" class="w-full"></textarea>
+            } @else {
+              <label hlmLabel>Descrizione</label>
+              @if (chargeForm.controls.description.value; as description) {
+                <p class="text-base leading-relaxed whitespace-pre-line">{{ description }}</p>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Amount -->
+          <div class="flex flex-col gap-2">
+            @if (isEditable()) {
+              <label hlmLabel for="amount">Importo (€, IVA esclusa)*</label>
+              <input rocketMoneyInput id="amount" placeholder="0,00" hlmInput formControlName="amount" />
+            } @else {
+              <label hlmLabel>Importo (IVA esclusa)</label>
+              @if (chargeForm.controls.amount.value != null) {
+                <span class="text-xl font-bold min-h-9 flex items-center">{{ chargeForm.controls.amount.value | currency:'EUR':'symbol':'1.2-2' }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Due date -->
+      <div hlmTabsContent="scadenza" class="flex flex-col gap-6 animate-rk-rise">
+        <div class="flex flex-col gap-1">
+          <h2 hlmCardTitle class="text-lg font-semibold">Scadenza</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          <!-- Kind -->
+          <div class="flex flex-col gap-2">
+            @if (isIdentityEditable()) {
+              <label hlmLabel for="kind">Tipo*</label>
+              <brn-select class="inline-block w-full" placeholder="Seleziona un tipo" formControlName="kind">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (kind of kinds; track kind) {
+                    <hlm-option [value]="kind">{{ kind === oneOff ? 'Una tantum' : 'Ricorrente' }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            } @else {
+              <label hlmLabel>Tipo</label>
+              @if (chargeForm.controls.kind.value; as kind) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ kind === oneOff ? 'Una tantum' : kind === contractShare ? 'Quota del contratto' : 'Ricorrente' }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          @if (hasSingleDueDate()) {
+            <!-- Single due date: one-off item or share of a contract -->
+            <div class="flex flex-col gap-2">
+              @if (isEditable()) {
+                <label hlmLabel for="dueDate">Scadenza*</label>
+                <hlm-date-picker buttonId="dueDate" formControlName="dueDate" class="w-full" [formatDate]="formatDate">
+                  <span>Seleziona una data</span>
+                </hlm-date-picker>
+              } @else {
+                <label hlmLabel>Scadenza</label>
+                @if (chargeForm.controls.dueDate.value; as dueDate) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ dueDate | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+          } @else {
+            <!-- Cadence -->
+            <div class="flex flex-col gap-2">
+              @if (isEditable()) {
+                <label hlmLabel for="cadence">Cadenza*</label>
+                <brn-select class="inline-block w-full" placeholder="Seleziona una cadenza" formControlName="cadence">
+                  <hlm-select-trigger class="w-full">
+                    <hlm-select-value />
+                  </hlm-select-trigger>
+                  <hlm-select-content>
+                    @for (cadence of cadences; track cadence) {
+                      <hlm-option [value]="cadence">{{ cadence | chargeCadence }}</hlm-option>
+                    }
+                  </hlm-select-content>
+                </brn-select>
+              } @else {
+                <label hlmLabel>Cadenza</label>
+                @if (chargeForm.controls.cadence.value; as cadence) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ cadence | chargeCadence }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- First due date -->
+            <div class="flex flex-col gap-2">
+              @if (isEditable()) {
+                <label hlmLabel for="ruleStart">Prima scadenza*</label>
+                <hlm-date-picker buttonId="ruleStart" formControlName="ruleStart" class="w-full" [formatDate]="formatDate">
+                  <span>Seleziona una data</span>
+                </hlm-date-picker>
+              } @else {
+                <label hlmLabel>Prima scadenza</label>
+                @if (chargeForm.controls.ruleStart.value; as ruleStart) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ ruleStart | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- End -->
+            <div class="flex flex-col gap-2">
+              @if (isEditable()) {
+                <label hlmLabel for="ruleEnd">Fine</label>
+                <hlm-date-picker buttonId="ruleEnd" formControlName="ruleEnd" class="w-full" [formatDate]="formatDate">
+                  <span>Nessuna</span>
+                </hlm-date-picker>
+                @if (chargeForm.controls.ruleEnd.errors?.['notBefore']) {
+                  <hlm-error>La fine non può precedere la prima scadenza.</hlm-error>
+                }
+              } @else {
+                <label hlmLabel>Fine</label>
+                @if (chargeForm.controls.ruleEnd.value; as ruleEnd) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ ruleEnd | date:'dd/MM/yyyy' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+          }
+        </div>
+      </div>
+      @if (isEditable() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

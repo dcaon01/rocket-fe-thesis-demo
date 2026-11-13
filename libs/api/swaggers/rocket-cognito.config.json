@@ -1,0 +1,15 @@
+{
+  "$schema": "../../../node_modules/ng-openapi-gen/ng-openapi-gen-schema.json",
+  "input": "libs/api/swaggers/swagger-rocket-cognito.json",
+  "output": "libs/api/src/lib/rocket-cognito",
+  "module": "RocketCognitoApiModule",
+  "modelPrefix": "Cognito",
+  "services": true,
+  "servicePrefix": "Cognito",
+  "baseService": "CognitoBaseService",
+  "requestBuilder": "CognitoRequestBuilder",
+  "configuration": "CognitoApiConfiguration",
+  "response": "CognitoStrictHttpResponse",
+  "indexFile": true,
+  "promises": false
+}

@@ -1,0 +1,113 @@
+<div class="flex flex-col gap-6">
+  <!-- Trials and orders -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Prove e ordini</h2>
+
+    <div class="grid grid-cols-4 gap-6">
+      @if (isLoading() && ordersCards.length === 0) {
+        <rocket-kpi-skeletons [count]="4" />
+      }
+      @for (card of ordersCards; track card.name; let i = $index) {
+        <div hlmCard class="rk-kpi px-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium">{{ card.name }}</p>
+            <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+          </div>
+          <p class="text-2xl font-bold">{{ ordersDisplayValues[i] }}</p>
+          @if (card.note) {
+            <p class="text-sm text-muted-foreground">{{ card.note }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="charts-row">
+      <div hlmCard class="chart-card line-chart-card">
+        <h3 class="chart-title">Andamento degli ordini</h3>
+        <div class="chart-container">
+          @if (isLoading() && !ordersLineOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (ordersLineOption) {
+            <div echarts [options]="ordersLineOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+
+      <div hlmCard class="chart-card pie-chart-card">
+        <h3 class="chart-title">Conversione delle prove (%)</h3>
+        <div class="chart-container">
+          @if (isLoading() && !conversionLineOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (conversionLineOption) {
+            <div echarts [options]="conversionLineOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Provisioning and channels -->
+  <div class="flex flex-col gap-6">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Erogazione e canali</h2>
+
+    <div class="grid grid-cols-4 gap-6">
+      @if (isLoading() && deliveryCards.length === 0) {
+        <rocket-kpi-skeletons [count]="4" />
+      }
+      @for (card of deliveryCards; track card.name; let i = $index) {
+        <div hlmCard class="rk-kpi px-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium">{{ card.name }}</p>
+            <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+          </div>
+          <p class="text-2xl font-bold">{{ deliveryDisplayValues[i] }}</p>
+          @if (card.note) {
+            <p class="text-sm text-muted-foreground">{{ card.note }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="charts-row">
+      <div hlmCard class="chart-card line-chart-card">
+        <h3 class="chart-title">Tempo medio di erogazione (giorni)</h3>
+        <div class="chart-container">
+          @if (isLoading() && !provisioningLineOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (provisioningLineOption) {
+            <div echarts [options]="provisioningLineOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+
+      <div hlmCard class="chart-card pie-chart-card">
+        <h3 class="chart-title">{{ period() === 'MONTHLY' ? 'Ripartizione dei canali del mese' : "Ripartizione dei canali dell'anno" }}</h3>
+        <div class="chart-container">
+          @if (isLoading() && !channelPieOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (channelPieOption) {
+            <div echarts [options]="channelPieOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div hlmCard class="chart-card equal-chart-card">
+        <h3 class="chart-title">{{ period() === 'MONTHLY' ? 'Rivenditori per licenze attivate nel mese' : "Rivenditori per licenze attivate nell'anno" }}</h3>
+        <div class="chart-container">
+          @if (isLoading() && !rankingBarOption) {
+            <hlm-skeleton class="size-full" />
+          }
+          @if (rankingBarOption) {
+            <div echarts [options]="rankingBarOption" class="w-full h-full"></div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

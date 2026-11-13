@@ -1,0 +1,26 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Dashboard prodotto" />
+
+  @if (productId(); as productId) {
+    <!-- Revenue -->
+    @if (canViewRevenue()) {
+      <rocket-revenue-section [productId]="productId" />
+    }
+
+    <!-- Customer base -->
+    @if (canViewCustomerBase()) {
+      <rocket-customer-base-section [productId]="productId" />
+    }
+
+    <!-- Usage -->
+    @if (canViewUsage()) {
+      <rocket-usage-section [productId]="productId" />
+    }
+
+    <!-- Channels -->
+    @if (canViewChannels()) {
+      <rocket-channel-split-section [productId]="productId" />
+    }
+  }
+</div>

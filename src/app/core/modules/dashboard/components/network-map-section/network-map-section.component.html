@@ -1,0 +1,96 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Rete dei rivenditori</h2>
+    <div class="flex items-center gap-3">
+      <!-- Map detail -->
+      <brn-select class="inline-block w-40" placeholder="Regione" (valueChange)="onMapLevelChange($event)">
+        <hlm-select-trigger class="w-40">
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <hlm-select-content>
+          <hlm-option value="REGION">Regione</hlm-option>
+          <hlm-option value="PROVINCE">Provincia</hlm-option>
+        </hlm-select-content>
+      </brn-select>
+
+      <!-- Time mode -->
+      <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onNetworkTimeChange($event)">
+        <hlm-select-trigger class="w-40">
+          <hlm-select-value />
+        </hlm-select-trigger>
+        <hlm-select-content>
+          <hlm-option value="MONTHLY">Mensile</hlm-option>
+          <hlm-option value="ANNUAL">Annuale</hlm-option>
+        </hlm-select-content>
+      </brn-select>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <!-- Map -->
+    <div hlmCard class="chart-card equal-chart-card">
+      <h3 class="chart-title">{{ (networkTime() === 'MONTHLY' ? 'Licenze attivate nel mese per ' : "Licenze attivate nell'anno per ") + (mapLevel() === 'PROVINCE' ? 'provincia' : 'regione') }}</h3>
+      <div class="chart-container h-[480px]!">
+        @if (isLoading() && !mapOption) {
+          <hlm-skeleton class="size-full" />
+        }
+        @if (mapOption) {
+          <!-- Drawn again when the detail changes, so the chart starts from the new map -->
+          @for (level of [mapLevel()]; track level) {
+            <div echarts [options]="mapOption" class="w-full h-full" (chartClick)="onMapClick($event)"></div>
+          }
+        }
+      </div>
+      <p class="text-xs text-muted-foreground">Confini ISTAT, via openpolis (CC BY 4.0)</p>
+    </div>
+
+    <!-- Resellers -->
+    <div hlmCard class="chart-card equal-chart-card">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="chart-title">{{ tableTitle() }}</h3>
+        @if (selectedAreas().length > 0) {
+          <button hlmBtn variant="outline" size="sm" class="mb-4" (click)="clearAreas()">
+            <ng-icon name="lucideX" size="16" />
+            Tutte le {{ levelPlural() }}
+          </button>
+        }
+      </div>
+      <div hlmTableContainer class="max-h-[480px] overflow-y-auto">
+        <table hlmTable>
+          <thead hlmTHead>
+            <tr hlmTr class="bg-background hover:bg-background">
+              <th hlmTh>Rivenditore</th>
+              <th hlmTh>Città</th>
+              <th hlmTh>Provincia</th>
+              <th hlmTh>Regione</th>
+              <th hlmTh class="text-right">Licenze attivate</th>
+            </tr>
+          </thead>
+          @if (shownResellers().length > 0) {
+            <tbody hlmTBody>
+              @for (reseller of shownResellers(); track reseller.id) {
+                <tr hlmTr class="cursor-pointer" [routerLink]="['/resellers/workspaces', reseller.id]">
+                  <td hlmTd>{{ reseller.companyName }}</td>
+                  <td hlmTd>{{ reseller.city ?? '-' }}</td>
+                  <td hlmTd>{{ reseller.province ?? '-' }}</td>
+                  <td hlmTd>{{ regionOf(reseller) ?? '-' }}</td>
+                  <td hlmTd class="text-right">{{ reseller.licensesActivated }}</td>
+                </tr>
+              }
+            </tbody>
+          } @else if (!isLoading()) {
+            <caption hlmCaption>
+              <hlm-empty>
+                <hlm-empty-header>
+                  <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                  <p hlmEmptyDescription>{{ selectedAreas().length > 0 ? 'Nessun rivenditore attivo nelle aree selezionate.' : 'Nessun rivenditore con il canone attivo.' }}</p>
+                </hlm-empty-header>
+              </hlm-empty>
+            </caption>
+          }
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

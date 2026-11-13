@@ -1,0 +1,283 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Filters -->
+  <form [formGroup]="calendarFilterForm" (ngSubmit)="applyFilters()" class="w-full flex gap-4 flex-wrap">
+    <!-- Search -->
+    <div class="flex flex-col gap-2 flex-1 min-w-64 max-w-80">
+      <label hlmLabel for="calendarSearch">Cerca</label>
+      <hlm-input-group>
+        <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+        <input type="text" id="calendarSearch" [placeholder]="isReseller() ? 'Numero, cliente, contratto o voce' : 'Numero, ragione sociale o partita IVA'" hlmInputGroupInput formControlName="search" autocomplete="off" />
+      </hlm-input-group>
+    </div>
+
+    <!-- Status -->
+    @if (!isReseller()) {
+      <div class="flex flex-col gap-2 min-w-44">
+        <label hlmLabel for="calendarStatus">Incasso</label>
+        <rocket-multi-select-filter buttonId="calendarStatus" formControlName="status" [options]="statusOptions" />
+      </div>
+    }
+
+    <!-- Actions -->
+    <div class="flex gap-2 items-end">
+      <button hlmBtn variant="outline" type="submit" [disabled]="!canApply()">Filtra</button>
+      @if (isFiltered()) {
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+
+    <!-- End of the row, such as the view tabs of the payment schedule -->
+    <ng-content select="[filtersEnd]" />
+  </form>
+
+  <div class="w-full flex flex-col lg:flex-row gap-4">
+    <!-- Calendar -->
+    <div class="flex-1 min-w-0 flex flex-col gap-3">
+      <!-- Month navigation -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1">
+          <button hlmBtn variant="ghost" size="icon" hlmTooltip="Mese precedente" aria-label="Mese precedente" (click)="goToPreviousMonth()">
+            <ng-icon name="lucideChevronLeft" size="16" />
+          </button>
+          <!-- Month picker -->
+          <hlm-popover sideOffset="5" [state]="monthPickerState()" (stateChanged)="onMonthPickerStateChange($event)">
+            <button hlmBtn variant="ghost" type="button" hlmPopoverTrigger class="min-w-40 text-base font-semibold" aria-label="Scegli il mese">
+              {{ monthLabel() }}
+            </button>
+            <hlm-popover-content class="w-64 p-3 flex flex-col gap-3" *hlmPopoverPortal="let ctx">
+              <!-- Year -->
+              <div class="flex items-center justify-between">
+                <button hlmBtn variant="ghost" size="icon-sm" type="button" hlmTooltip="Anno precedente" aria-label="Anno precedente" (click)="pickerYear.set(pickerYear() - 1)">
+                  <ng-icon name="lucideChevronLeft" size="16" />
+                </button>
+                <span class="text-sm font-semibold">{{ pickerYear() }}</span>
+                <button hlmBtn variant="ghost" size="icon-sm" type="button" hlmTooltip="Anno successivo" aria-label="Anno successivo" (click)="pickerYear.set(pickerYear() + 1)">
+                  <ng-icon name="lucideChevronRight" size="16" />
+                </button>
+              </div>
+
+              <!-- Months -->
+              <div class="grid grid-cols-3 gap-1">
+                @for (label of monthLabels; track $index) {
+                  <button
+                    hlmBtn
+                    size="sm"
+                    type="button"
+                    [variant]="isShownMonth($index) ? 'default' : isThisMonth($index) ? 'outline' : 'ghost'"
+                    (click)="selectMonth($index)"
+                  >
+                    {{ label }}
+                  </button>
+                }
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
+          <button hlmBtn variant="ghost" size="icon" hlmTooltip="Mese successivo" aria-label="Mese successivo" (click)="goToNextMonth()">
+            <ng-icon name="lucideChevronRight" size="16" />
+          </button>
+        </div>
+        <button hlmBtn variant="outline" size="sm" (click)="goToToday()">Oggi</button>
+      </div>
+
+      <!-- Weekdays -->
+      <div class="grid grid-cols-7 gap-1 text-xs font-medium text-muted-foreground">
+        @for (label of weekdayLabels; track label) {
+          <div class="text-center py-1">{{ label }}</div>
+        }
+      </div>
+
+      <!-- Weeks -->
+      <div class="flex flex-col gap-1">
+        @for (week of weeks(); track $index) {
+          <div class="grid grid-cols-7 gap-1">
+            @for (cell of week; track cell.dayKey) {
+              <button
+                type="button"
+                (click)="selectDay(cell)"
+                class="flex flex-col items-start min-h-24 p-1.5 rounded-md border text-left transition-colors hover:bg-accent"
+                [ngClass]="{
+                  'border-primary bg-accent': cell.dayKey === selectedDayKey(),
+                  'border-border': cell.dayKey !== selectedDayKey(),
+                  'opacity-60': !cell.inMonth,
+                }"
+              >
+                <span
+                  class="text-xs font-medium h-5 w-5 flex items-center justify-center rounded-full"
+                  [class.bg-primary]="isToday(cell)"
+                  [class.text-primary-foreground]="isToday(cell)"
+                >
+                  {{ cell.date.getDate() }}
+                </span>
+                @if (cell.entries.length > 0) {
+                  <div class="mt-auto flex flex-col">
+                    @if (cell.totalCents > 0) {
+                      <span class="text-xs font-semibold" [class.text-destructive]="cell.late">
+                        {{ isReseller() ? '−' : '' }}{{ cell.totalCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+                      </span>
+                    }
+                    @if (cell.expectedCents > 0) {
+                      <span class="text-xs text-muted-foreground">
+                        previsti {{ isReseller() ? '−' : '' }}{{ cell.expectedCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+                      </span>
+                    }
+                    @if (cell.expectedCustomersCents > 0) {
+                      <span class="text-xs text-muted-foreground">
+                        previsti +{{ cell.expectedCustomersCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+                      </span>
+                    }
+                    @if (cell.customersCents > 0) {
+                      <span class="text-xs font-semibold" [class.text-destructive]="cell.late">
+                        +{{ cell.customersCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+                      </span>
+                    }
+                    <span class="text-[10px] leading-tight text-muted-foreground">
+                      {{ cell.entries.length }} {{ cell.entries.length === 1 ? 'scadenza' : 'scadenze' }}
+                    </span>
+                  </div>
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Selected day -->
+    <aside class="w-full lg:w-80 shrink-0 flex flex-col gap-3 lg:border-l lg:border-border lg:pl-4">
+      <div class="flex flex-col">
+        <h3 class="text-sm font-semibold">{{ selectedDayLabel() }}</h3>
+        @if (isReseller()) {
+          <p class="text-xs text-muted-foreground">
+            In uscita: {{ selectedCell().totalCents / 100 | currency:'EUR':'symbol':'1.2-2' }} · in entrata: {{ selectedCell().customersCents / 100 | currency:'EUR':'symbol':'1.2-2' }} IVA esclusa
+          </p>
+          @if (selectedCell().expectedCents > 0 || selectedCell().expectedCustomersCents > 0) {
+            <p class="text-xs text-muted-foreground">
+              Previsti in uscita: {{ selectedCell().expectedCents / 100 | currency:'EUR':'symbol':'1.2-2' }} · in entrata: {{ selectedCell().expectedCustomersCents / 100 | currency:'EUR':'symbol':'1.2-2' }} IVA esclusa
+            </p>
+          }
+        } @else {
+          <p class="text-xs text-muted-foreground">
+            Totale: {{ selectedCell().totalCents / 100 | currency:'EUR':'symbol':'1.2-2' }} · previsti: {{ selectedCell().expectedCents / 100 | currency:'EUR':'symbol':'1.2-2' }}
+          </p>
+        }
+      </div>
+
+      @if (selectedCell().entries.length > 0) {
+        <div class="flex flex-col gap-2 lg:max-h-[640px] lg:overflow-y-auto pr-1">
+          @for (entry of selectedCell().entries; track entry.key) {
+            @if (entry.invoice; as invoice) {
+              <div class="w-full p-2.5 rounded-md border border-border flex flex-col gap-1.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-col min-w-0">
+                    @if (isReseller()) {
+                      <span class="text-sm font-semibold truncate">Fattura di Keus</span>
+                    } @else {
+                      <span class="text-sm font-semibold truncate">{{ invoice.billedParty.name }}</span>
+                    }
+                    @if (invoice.number) {
+                      <span class="text-xs text-muted-foreground">{{ invoice.number }}</span>
+                    } @else {
+                      <span class="text-xs text-muted-foreground">-</span>
+                    }
+                  </div>
+                  <span class="shrink-0 text-sm font-semibold">{{ invoice.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+                  @if (isReseller()) {
+                    <span hlmBadge variant="outline">In uscita</span>
+                  }
+                  <span hlmBadge variant="outline" rocketInvoiceStatus [status]="invoice.status">{{ invoice.status | invoiceStatus:isReseller() }}</span>
+                  @if (invoice.prorationId) {
+                    <span hlmBadge variant="outline">Rateo</span>
+                  }
+                  @if (invoice.status === unpaid) {
+                    <span class="text-xs text-muted-foreground">{{ invoice.dunningStep | dunningStep }}</span>
+                  }
+                  @switch (dueState(invoice)) {
+                    @case ('overdue') {
+                      <span class="text-xs text-destructive">Scaduta</span>
+                    }
+                    @case ('dueSoon') {
+                      <span class="text-xs text-muted-foreground">Entro 7 giorni</span>
+                    }
+                  }
+                  @if (contractRoute(invoice); as route) {
+                    <a class="ml-auto text-xs underline-offset-4 hover:underline" [routerLink]="route">Contratto</a>
+                  }
+                </div>
+              </div>
+            } @else if (entry.expected; as expected) {
+              <!-- Expected payment -->
+              <div class="w-full p-2.5 rounded-md border border-dashed border-border flex flex-col gap-1.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-col min-w-0">
+                    @if (!isReseller()) {
+                      <span class="text-sm font-semibold truncate">{{ expected.billedPartyName }}</span>
+                    } @else if (entry.direction === toKeus) {
+                      <span class="text-sm font-semibold truncate">Fattura di Keus</span>
+                    } @else {
+                      <span class="text-sm font-semibold truncate">{{ expected.companyName }}</span>
+                    }
+                    <span class="text-xs line-clamp-2">{{ expected.description }}</span>
+                    <span class="text-xs text-muted-foreground">Contratto {{ expected.contractCode }}</span>
+                  </div>
+                  @if (entry.direction === toKeus) {
+                    <span class="shrink-0 text-sm font-semibold">{{ expected.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                  } @else if (expected.customerCents !== undefined) {
+                    <span class="shrink-0 text-sm font-semibold">+{{ expected.customerCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                  }
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+                  @if (isReseller()) {
+                    <span hlmBadge variant="outline">{{ entry.direction === toKeus ? 'In uscita' : 'In entrata' }}</span>
+                  }
+                  <span hlmBadge variant="outline" rocketInvoiceStatus [status]="expectedStatus">{{ expectedStatus | invoiceStatus }}</span>
+                  @if (expectedRoute(expected); as route) {
+                    <a class="ml-auto text-xs underline-offset-4 hover:underline" [routerLink]="route">Contratto</a>
+                  }
+                </div>
+              </div>
+            } @else if (entry.charge; as charge) {
+              <div class="w-full p-2.5 rounded-md border border-border flex flex-col gap-1.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-sm font-semibold truncate">{{ charge.companyName }}</span>
+                    <span class="text-xs line-clamp-2">{{ charge.description }}</span>
+                    <span class="text-xs text-muted-foreground">
+                      @if (charge.kind === contractShare) {
+                        Contratto {{ charge.contractCode }}
+                      } @else if (charge.kind === recurring) {
+                        Ricorrente, {{ charge.cadence | chargeCadence | lowercase }}
+                      } @else {
+                        Una tantum
+                      }
+                    </span>
+                  </div>
+                  <span class="shrink-0 text-sm font-semibold">+{{ charge.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-border/60">
+                  <span hlmBadge variant="outline">In entrata</span>
+                  <span hlmBadge variant="outline" rocketInvoiceStatus [status]="entry.collected ? paid : open">{{ entry.collected ? 'Incassata' : 'Da incassare' }}</span>
+                  @if (customerDueState(entry) === 'overdue') {
+                    <span class="text-xs text-destructive">Scaduta</span>
+                  }
+                  <a class="ml-auto text-xs underline-offset-4 hover:underline" [routerLink]="chargeRoute(entry)">Voce</a>
+                  @if (canManageCharges()) {
+                    <button hlmBtn variant="ghost" size="xs" (click)="collectedDialog.open(entry)">
+                      {{ entry.collected ? 'Segna da incassare' : 'Segna incassata' }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-muted-foreground">Nessuna scadenza in questo giorno.</p>
+      }
+    </aside>
+  </div>
+
+  <!-- Confirmation of a due date collected or not -->
+  <rocket-collected-dialog #collectedDialog (changed)="reload()" />
+</div>

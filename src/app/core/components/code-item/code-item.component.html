@@ -1,0 +1,9 @@
+<span hlmLabel>{{ label() }}</span>
+@if (value(); as v) {
+  <div class="min-h-9 flex items-center gap-1 min-w-0">
+    <span class="text-base font-medium break-all" [class.font-mono]="mono()">{{ v }}</span>
+    <rocket-copy-button [value]="v" />
+  </div>
+} @else {
+  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+}

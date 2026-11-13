@@ -1,0 +1,142 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="line() ? 'Erogazione ' + line()!.productName : 'Erogazione'" [description]="description()">
+    <rocket-form-toolbar [steps]="steps">
+      <span class="inline-flex" [hlmTooltip]="blockedReason() || (isFormInvalid ? 'Completa i campi obbligatori' : !steps.allVisited() ? 'Apri prima tutte le sezioni' : '')">
+        <button hlmBtn (click)="provision()" [disabled]="isFormInvalid || !!blockedReason() || isLoading() || !line() || !steps.allVisited()">
+          {{ isLoading() ? 'Caricamento...' : 'Eroga' }}
+        </button>
+      </span>
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <form [formGroup]="provisionForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+    <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+      <!-- Sidebar: steps -->
+      <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+        <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+      </aside>
+
+      <!-- Right content -->
+      <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="steps.activeTab() === 'users' ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+        <!-- Tenant -->
+        <div hlmTabsContent="tenant" class="animate-rk-rise">
+          <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+            <!-- Source -->
+            <div class="flex flex-col gap-2 col-span-2">
+              <label hlmLabel for="tenantSource">Tenant*</label>
+              <brn-select class="inline-block w-full" [formControl]="tenantSource">
+                <hlm-select-trigger class="w-full" id="tenantSource">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (source of tenantSources; track source.value) {
+                    <hlm-option [value]="source.value">{{ source.label }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            </div>
+
+            @if (isExisting()) {
+              <!-- Existing tenant -->
+              <div class="flex flex-col gap-2 col-span-4">
+                <label hlmLabel for="existingTenantId">Tenant esistente*</label>
+                <hlm-combobox [formControl]="existingTenantId" [filter]="comboboxContainsFilter" [itemToString]="tenantOptionLabel" (searchChange)="tenants.search.set($event)">
+                  <hlm-combobox-input id="existingTenantId" placeholder="Cerca tenant" />
+                  <ng-template hlmComboboxPortal>
+                    <hlm-combobox-content>
+                      <div hlmComboboxList>
+                        @for (option of tenants.options(); track option.value) {
+                          <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                        }
+                        <div hlmComboboxEmpty [class.flex!]="tenants.options().length === 0">Nessun tenant trovato</div>
+                      </div>
+                    </hlm-combobox-content>
+                  </ng-template>
+                </hlm-combobox>
+              </div>
+            } @else {
+              <!-- New tenant -->
+              <ng-container formGroupName="tenant">
+                <div class="flex flex-col gap-2 flex-1 col-span-2 col-start-1">
+                  <label hlmLabel for="name">Nome*</label>
+                  <input type="text" id="name" placeholder="Nome del tenant" hlmInput formControlName="name" autocomplete="off" />
+                </div>
+                <div class="flex flex-col gap-2 flex-1 col-span-4">
+                  <label hlmLabel for="description">Descrizione</label>
+                  <input type="text" id="description" placeholder="Descrizione del tenant" hlmInput formControlName="description" autocomplete="off" />
+                </div>
+              </ng-container>
+            }
+          </div>
+        </div>
+
+        <!-- Tenant data -->
+        @if (tenantFields().length > 0 && product(); as product) {
+          <div hlmTabsContent="tenantData" class="animate-rk-rise">
+            <rocket-structure-fields [group]="provisionForm.controls.tenant.controls.data" [structure]="product.tenantStructure" idPrefix="tenant-" />
+          </div>
+        }
+
+        <!-- Users -->
+        <div hlmTabsContent="users" class="animate-rk-rise">
+          <div class="w-full flex flex-col gap-8">
+            @for (user of userGroups; track user; let i = $index) {
+              <!-- User card -->
+              <div hlmCard [formGroup]="user" class="bg-muted [&_[hlmInput]]:bg-background! [&_[data-slot=textarea]]:bg-background! [&_[data-slot=input-group]]:bg-background! [&_hlm-select-trigger>button]:bg-background! [&_hlm-combobox-chips]:bg-background!">
+                <div hlmCardHeader>
+                  <h4 hlmCardTitle class="flex items-center gap-2">
+                    <ng-icon name="lucideUser" size="16" />
+                    {{ i === 0 ? 'Referente' : 'Utente ' + (i + 1) }}
+                  </h4>
+                  @if (i > 0) {
+                    <div hlmCardAction class="flex items-center gap-4">
+                      <button hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Rimuovi utente" aria-label="Rimuovi utente" (click)="removeUser(i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                    </div>
+                  }
+                </div>
+                <div hlmCardContent class="flex flex-col gap-8">
+                  <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+                    <div class="flex flex-col gap-2 flex-1 col-span-2">
+                      <label hlmLabel [for]="'user-email-' + i">Email*</label>
+                      <input type="email" [id]="'user-email-' + i" placeholder="Email dell'utente" hlmInput formControlName="email" autocomplete="off" />
+                    </div>
+                    <div class="flex flex-col gap-2 flex-1 col-span-2">
+                      <label hlmLabel [for]="'user-name-' + i">Nome</label>
+                      <input type="text" [id]="'user-name-' + i" placeholder="Nome" hlmInput formControlName="name" autocomplete="off" />
+                    </div>
+                    <div class="flex flex-col gap-2 flex-1 col-span-2">
+                      <label hlmLabel [for]="'user-surname-' + i">Cognome</label>
+                      <input type="text" [id]="'user-surname-' + i" placeholder="Cognome" hlmInput formControlName="surname" autocomplete="off" />
+                    </div>
+                    @if (roles().length > 0) {
+                      <div class="flex flex-col gap-2 col-span-6">
+                        <label hlmLabel [for]="'user-roles-' + i">Ruoli*</label>
+                        <rocket-multi-select formControlName="roles" [options]="roles()" title="Ruoli" [inputId]="'user-roles-' + i" />
+                      </div>
+                    }
+                  </div>
+                  @if (product(); as product) {
+                    <rocket-structure-fields [group]="user.controls.data" [structure]="product.userStructure" [idPrefix]="'user-' + i + '-'" />
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Adding user row -->
+            <div class="w-full flex justify-center items-center gap-4">
+              <button type="button" hlmBtn variant="ghost" (click)="addUser()" [disabled]="usersCount() >= maxUsers()">
+                Aggiungi utente
+                <ng-icon name="lucidePlus" hlm />
+              </button>
+              <span class="text-sm text-muted-foreground">{{ usersCount() }} di {{ maxUsers() }}</span>
+            </div>
+          </div>
+        </div>
+        @if (steps.hasFields()) {
+          <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+        }
+      </div>
+    </hlm-tabs>
+  </form>
+</div>

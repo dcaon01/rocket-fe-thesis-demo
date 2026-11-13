@@ -1,0 +1,29 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <rocket-page-header headerTitle="Metriche tecniche" description="Controlla errori e disponibilità del prodotto.">
+      @if (sentryUrl(); as url) {
+        <a headerMeta hlmBtn variant="outline" size="sm" [href]="url" target="_blank" rel="noopener">
+          <ng-icon name="lucideExternalLink" size="16" />
+          Apri su Sentry
+        </a>
+      }
+    </rocket-page-header>
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onPeriodChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  <!-- Metrics -->
+  @if (canViewTechnicalMetrics()) {
+    @if (productId(); as productId) {
+      <rocket-technical-metrics-section [productId]="productId" [period]="period()" (sentryLink)="sentryUrl.set($event)" />
+    }
+  }
+</div>

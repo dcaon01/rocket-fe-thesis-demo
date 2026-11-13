@@ -1,0 +1,11 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Scadenziario" description="Segui i pagamenti da incassare, insoluti e previsti, sul calendario o in elenco.">
+    <button hlmBtn variant="outline" size="sm" hlmTooltip="Aggiorna" aria-label="Aggiorna" (click)="schedule.reload()">
+      <ng-icon name="lucideRefreshCw" size="16" />
+    </button>
+  </rocket-page-header>
+
+  <!-- Schedule -->
+  <rocket-payment-schedule-tabs #schedule mode="schedule" />
+</div>

@@ -1,0 +1,49 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Canali</h2>
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onChannelTimeChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  <div class="charts-row">
+    <!-- Channel cards -->
+    <div class="flex flex-1 flex-col gap-6">
+      @if (isLoading() && channelCards.length === 0) {
+        <rocket-kpi-skeletons [count]="2" />
+      }
+      @for (card of channelCards; track card.name; let i = $index) {
+        <div hlmCard class="rk-kpi flex-1 justify-between px-6">
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-sm font-medium">{{ card.name }}</p>
+            <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+          </div>
+          <p class="text-2xl font-bold">{{ channelDisplayValues[i] }}</p>
+          @if (card.note) {
+            <p class="text-sm text-muted-foreground">{{ card.note }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Channel pie -->
+    <div hlmCard class="chart-card line-chart-card">
+      <h3 class="chart-title">Ripartizione dei canali</h3>
+      <div class="chart-container">
+        @if (isLoading() && !channelPieOption) {
+          <hlm-skeleton class="size-full" />
+        }
+        @if (channelPieOption) {
+          <div echarts [options]="channelPieOption" class="w-full h-full"></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

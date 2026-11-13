@@ -1,0 +1,88 @@
+<div class="flex flex-col gap-6">
+  <!-- Section header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold tracking-tight text-foreground">Posizione economica</h2>
+
+    <!-- Period -->
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onBillingTimeChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  <!-- Billing cards -->
+  <div class="grid grid-cols-4 gap-6">
+    @if (isLoading() && billingCards.length === 0) {
+      <rocket-kpi-skeletons [count]="3" />
+    }
+    @for (card of billingCards; track card.name; let i = $index) {
+      <div hlmCard class="rk-kpi px-6">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-medium">{{ card.name }}</p>
+          <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+        </div>
+        <p class="text-2xl font-bold">{{ billingDisplayValues[i] }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- Billing chart -->
+  <div hlmCard class="chart-card">
+    <h3 class="chart-title">Andamento fatturato da Keus</h3>
+    <div class="chart-container">
+      @if (isLoading() && !issuedLineOption) {
+        <hlm-skeleton class="size-full" />
+      }
+      @if (issuedLineOption) {
+        <div echarts [options]="issuedLineOption" class="w-full h-full"></div>
+      }
+    </div>
+  </div>
+
+  <!-- Dues -->
+  <div class="flex flex-col gap-3">
+    <h3 class="text-lg font-semibold tracking-tight text-foreground">Fatture da pagare</h3>
+    <div hlmTableContainer>
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr class="bg-background hover:bg-background">
+            <th hlmTh>Numero</th>
+            <th hlmTh>Emissione</th>
+            <th hlmTh>Scadenza</th>
+            <th hlmTh class="text-right">Importo</th>
+            <th hlmTh>Stato</th>
+          </tr>
+        </thead>
+        @if (dues().length > 0) {
+          <tbody hlmTBody>
+            @for (invoice of dues(); track invoice.id) {
+              <tr hlmTr>
+                <td hlmTd>{{ invoice.number ?? '-' }}</td>
+                <td hlmTd>{{ invoice.issuedAt | date:'dd/MM/yyyy' }}</td>
+                <td hlmTd>{{ invoice.dueDate ? (invoice.dueDate | date:'dd/MM/yyyy') : '-' }}</td>
+                <td hlmTd class="text-right">{{ invoice.amountCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</td>
+                <td hlmTd>
+                  <span hlmBadge variant="outline" rocketInvoiceStatus [status]="invoice.status">{{ invoice.status | invoiceStatus:true }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        } @else if (!isLoading()) {
+          <caption hlmCaption>
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                <p hlmEmptyDescription>Nessuna fattura da pagare.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          </caption>
+        }
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,44 @@
+<div hlmTableContainer>
+  <table hlmTable>
+    <thead hlmTHead>
+      <tr hlmTr class="bg-background hover:bg-background">
+        <th hlmTh class="w-16"></th>
+        <th hlmTh>Nome</th>
+        <th hlmTh>Descrizione</th>
+        <th hlmTh></th>
+      </tr>
+    </thead>
+    @if (products().length > 0) {
+      <tbody hlmTBody>
+        @for (product of products(); track product.id) {
+          <tr hlmTr>
+            <td hlmTd>
+              <hlm-avatar>
+                @if (getLogoUrl(product.logoS3Key)) {
+                  <img [src]="getLogoUrl(product.logoS3Key)" [alt]="product.name" hlmAvatarImage />
+                }
+                <span class="text-white bg-primary text-xs" hlmAvatarFallback>{{ getInitials(product.prefix) }}</span>
+              </hlm-avatar>
+            </td>
+            <td hlmTd>{{ product.name }}</td>
+            <td hlmTd>{{ product.description || '-' }}</td>
+            <td hlmTd class="text-right">
+              @if (canOpenWorkspace()) {
+                <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Apri workspace" aria-label="Apri workspace" (click)="goToProductWorkspace(product.id)"><ng-icon name="lucideFolderOpen" size="16" /></button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    } @else {
+      <caption hlmCaption>
+        <hlm-empty>
+          <hlm-empty-header>
+            <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucidePackage" size="20" /></div>
+            <p hlmEmptyDescription>Nessun prodotto abilitato.</p>
+          </hlm-empty-header>
+        </hlm-empty>
+      </caption>
+    }
+  </table>
+</div>

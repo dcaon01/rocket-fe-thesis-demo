@@ -1,0 +1,42 @@
+# Reusable workflow — deploys a build artifact to AWS S3.
+# Called by ci.yml after a successful build.
+name: Deploy Application
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      artifact-name:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # OIDC auth requires id-token write permission
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      # Assume the IAM role for the target environment via OIDC
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars[format('{0}_AWS_IAM_ROLE_ARN', inputs.environment)] }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Retrieve the build artifact produced by the build workflow
+      - name: Download artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ./dist
+
+      # Sync the Angular build output to the S3 bucket (--delete removes stale files)
+      - name: Deploy to S3
+        run: |
+          aws s3 sync ./dist/browser/ s3://${{ vars[format('{0}_S3_BUCKET', inputs.environment)] }} --delete
+          aws cloudfront create-invalidation --distribution-id ${{ vars[format('{0}_CLOUDFRONT_ID', inputs.environment)] }} --paths "/*"

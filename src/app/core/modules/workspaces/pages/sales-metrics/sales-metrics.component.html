@@ -1,0 +1,153 @@
+<div class="w-full flex flex-col gap-6">
+  <div class="flex items-center justify-between">
+    <rocket-page-header headerTitle="Vendita" description="Segui ordini, conversioni e tempi di vendita.">
+      @if (hubspotUrl(); as url) {
+        <a headerMeta hlmBtn variant="outline" size="sm" [href]="url" target="_blank" rel="noopener">
+          <ng-icon name="lucideExternalLink" size="16" />
+          Apri su HubSpot
+        </a>
+      }
+    </rocket-page-header>
+    <brn-select class="inline-block w-40" placeholder="Mensile" (valueChange)="onPeriodChange($event)">
+      <hlm-select-trigger class="w-40">
+        <hlm-select-value />
+      </hlm-select-trigger>
+      <hlm-select-content>
+        <hlm-option value="MONTHLY">Mensile</hlm-option>
+        <hlm-option value="ANNUAL">Annuale</hlm-option>
+      </hlm-select-content>
+    </brn-select>
+  </div>
+
+  @if (canViewPipeline()) {
+    <!-- ==================== PIPELINE ==================== -->
+    <div class="flex flex-col gap-6">
+      <h2 class="text-xl font-semibold tracking-tight text-foreground">Pipeline</h2>
+
+      <!-- Pipeline cards -->
+      <div class="grid grid-cols-4 gap-6">
+        @if (isLoading() && pipelineCards.length === 0) {
+          <rocket-kpi-skeletons [count]="4" />
+        }
+        @for (card of pipelineCards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            <p class="text-2xl font-bold">{{ integrationsEnabled ? pipelineDisplayValues[i] : '-' }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Pipeline charts -->
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <h3 class="chart-title">Andamento deals</h3>
+          <div class="chart-container">
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              @if (isLoading() && !dealsTrendOption) {
+                <hlm-skeleton class="size-full" />
+              }
+              @if (dealsTrendOption) {
+                <div echarts [options]="dealsTrendOption" class="w-full h-full"></div>
+              }
+            } @else {
+              <rocket-unavailable-data source="HubSpot" />
+            }
+          </div>
+        </div>
+
+        <div hlmCard class="chart-card pie-chart-card">
+          <h3 class="chart-title">Composizione esito</h3>
+          <div class="chart-container">
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              @if (isLoading() && !dealsOutcomeOption) {
+                <hlm-skeleton class="size-full" />
+              }
+              @if (dealsOutcomeOption) {
+                <div echarts [options]="dealsOutcomeOption" class="w-full h-full"></div>
+              } @else if (outcomeLoaded()) {
+                <hlm-empty class="h-full">
+                  <hlm-empty-header>
+                    <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                    <p hlmEmptyDescription>Nessun deal chiuso nel periodo.</p>
+                  </hlm-empty-header>
+                </hlm-empty>
+              }
+            } @else {
+              <rocket-unavailable-data source="HubSpot" />
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== REVENUE ==================== -->
+    <div class="flex flex-col gap-6">
+      <h2 class="text-xl font-semibold tracking-tight text-foreground">Revenue</h2>
+
+      <!-- Revenue cards -->
+      <div class="grid grid-cols-4 gap-6">
+        @if (isLoading() && revenueCards.length === 0) {
+          <rocket-kpi-skeletons [count]="4" />
+        }
+        @for (card of revenueCards; track card.name; let i = $index) {
+          <div hlmCard class="rk-kpi px-6">
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-sm font-medium">{{ card.name }}</p>
+              <ng-icon [name]="card.icon" size="16" class="shrink-0" />
+            </div>
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            <p class="text-2xl font-bold">{{ integrationsEnabled ? revenueDisplayValues[i] : '-' }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Revenue charts -->
+      <div class="charts-row">
+        <div hlmCard class="chart-card line-chart-card">
+          <h3 class="chart-title">Andamento valore deals vinti</h3>
+          <div class="chart-container">
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              @if (isLoading() && !revenueTrendOption) {
+                <hlm-skeleton class="size-full" />
+              }
+              @if (revenueTrendOption) {
+                <div echarts [options]="revenueTrendOption" class="w-full h-full"></div>
+              }
+            } @else {
+              <rocket-unavailable-data source="HubSpot" />
+            }
+          </div>
+        </div>
+
+        <div hlmCard class="chart-card pie-chart-card">
+          <h3 class="chart-title">Deal vinti per trimestre</h3>
+          <div class="chart-container">
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              @if (isLoading() && !quarterlyDealsOption) {
+                <hlm-skeleton class="size-full" />
+              }
+              @if (quarterlyDealsOption) {
+                <div echarts [options]="quarterlyDealsOption" class="w-full h-full"></div>
+              }
+            } @else {
+              <rocket-unavailable-data source="HubSpot" />
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ==================== ORDERS ==================== -->
+  @if (canViewOrders()) {
+    <rocket-sales-orders-section [productId]="productId" [period]="periodTime()" />
+  }
+</div>

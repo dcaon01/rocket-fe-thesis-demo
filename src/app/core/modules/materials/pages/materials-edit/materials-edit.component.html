@@ -1,0 +1,100 @@
+<div class="w-full h-full flex flex-col gap-8">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="material()?.title ?? 'Materiale'" description="Modifica contenuto, visibilità e file del materiale.">
+    @if (material(); as current) {
+      <span headerMeta class="flex items-center gap-2 text-sm text-muted-foreground">
+        <span hlmBadge variant="outline" rocketMaterialStatus [status]="current.status">{{ current.status | materialStatus }}</span>
+        <span>{{ current.type | materialType }}</span>
+      </span>
+    }
+    @if (canManage()) {
+      <!-- Options menu -->
+      @if (hasMenuActions()) {
+        <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+          <ng-icon name="lucideEllipsisVertical" size="18" />
+        </button>
+      }
+      <ng-template #actionsMenu>
+        <hlm-dropdown-menu>
+          @if (canPublish() && (!hasContent() || form()?.changed())) {
+            <button hlmDropdownMenuItem (click)="publishMaterial()" [disabled]="!hasContent() || form()?.changed()">
+              <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+              <span>
+                @if (!hasContent()) {
+                  {{ isLink() ? 'Inserisci il link prima di pubblicare' : 'Carica il file prima di pubblicare' }}
+                } @else if (form()?.changed()) {
+                  Salva prima di pubblicare
+                } @else {
+                  Pubblica
+                }
+              </span>
+            </button>
+          }
+          @if (canWithdraw()) {
+            <button hlmDropdownMenuItem (click)="withdrawMaterial()">
+              <ng-icon name="lucideEyeOff" class="mr-2 h-4 w-4" />
+              <span>Ritira</span>
+            </button>
+          }
+        </hlm-dropdown-menu>
+      </ng-template>
+
+      <!-- Primary button: the changes to save, otherwise the publication once the content is there -->
+      @if (canPublish() && hasContent() && !form()?.changed()) {
+        <button hlmBtn (click)="publishMaterial()" [disabled]="isLoading()">
+          <ng-icon name="lucideSend" size="16" />
+          Pubblica
+        </button>
+      } @else {
+        <span class="inline-flex" [hlmTooltip]="!form()?.changed() ? 'Nessuna modifica da salvare' : form()?.materialForm?.invalid ? 'Completa i campi obbligatori' : ''">
+          <button hlmBtn (click)="saveMaterial()" [disabled]="!form()?.changed() || form()?.materialForm?.invalid || isLoading()">Salva</button>
+        </span>
+      }
+    }
+  </rocket-page-header>
+
+  @if (material(); as current) {
+    <!-- Material form, with the file as its last section -->
+    <rocket-material-form class="flex-1 min-h-0 flex flex-col" #form [material]="current" [readonly]="!canManage()">
+      <div
+        materialFile
+        hlmItem
+        variant="outline"
+        class="border-dashed rounded-xl transition-colors"
+        rocketFileDropZone
+        [fileDropDisabled]="!canManage() || isLoading()"
+        (filesDropped)="onFileSelected($event[0])"
+      >
+        <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+          <ng-icon name="lucideFileUp" size="18" />
+        </div>
+        <div hlmItemContent>
+          @if (fileName(); as name) {
+            <div hlmItemTitle class="truncate">{{ name }}</div>
+            @if (current.sizeBytes) {
+              <p hlmItemDescription>{{ current.sizeBytes / 1024 / 1024 | number:'1.1-1' }} MB</p>
+            }
+          } @else {
+            <div hlmItemTitle>{{ canManage() ? 'Trascina qui il file' : 'Nessun file caricato' }}</div>
+            <p hlmItemDescription>PDF, Word, PowerPoint, Excel, ZIP o immagini.</p>
+          }
+        </div>
+        <div hlmItemActions>
+          @if (canManage()) {
+            <button hlmBtn variant="outline" size="sm" type="button" (click)="fileInput.click()" [disabled]="isLoading()">
+              {{ current.fileS3Key ? 'Sostituisci il file' : 'Scegli il file' }}
+              <ng-icon hlm name="lucideFileUp" size="16" />
+            </button>
+            <input #fileInput type="file" class="hidden" [accept]="materialAccept" (change)="onFileChosen($event)" />
+          }
+          @if (current.fileS3Key) {
+            <button hlmBtn variant="ghost" size="sm" type="button" (click)="downloadFile()">
+              Scarica
+              <ng-icon hlm name="lucideDownload" size="16" />
+            </button>
+          }
+        </div>
+      </div>
+    </rocket-material-form>
+  }
+</div>

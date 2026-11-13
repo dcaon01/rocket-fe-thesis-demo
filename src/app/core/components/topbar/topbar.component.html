@@ -1,0 +1,60 @@
+<div class="flex flex-row items-center gap-2 px-6 h-14 border-b bg-background">
+  <!-- Breadcrumbs -->
+  <nav hlmBreadcrumb class="flex-1 min-w-0">
+    <ol hlmBreadcrumbList>
+      @for (item of breadcrumbs(); track $index; let last = $last) {
+        <li hlmBreadcrumbItem>
+          @if (item.url) {
+            <a hlmBreadcrumbLink [link]="item.url">{{ item.label }}</a>
+          } @else if (last) {
+            <span hlmBreadcrumbPage>{{ item.label }}</span>
+          } @else {
+            <span>{{ item.label }}</span>
+          }
+        </li>
+        @if (!last) {
+          <li hlmBreadcrumbSeparator class="flex items-center"></li>
+        }
+      }
+    </ol>
+  </nav>
+
+  <!-- Workspace selector -->
+  <div class="flex flex-row gap-2.5 items-center justify-end">
+    <!-- Product combobox -->
+    @if (canOpenWorkspaces()) {
+      <hlm-combobox class="w-64" [value]="currentProduct()?.id ?? null" (valueChange)="onProductChange($event)" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+        <hlm-combobox-input placeholder="Cerca prodotto">
+          @if (currentProduct(); as product) {
+            <hlm-input-group-addon align="inline-start">
+              <hlm-avatar class="h-5 w-5">
+                @if (getLogoUrl(product.logoS3Key)) {
+                  <img [src]="getLogoUrl(product.logoS3Key)" [alt]="product.name" hlmAvatarImage />
+                }
+                <span class="text-white bg-primary text-[8px]" hlmAvatarFallback>{{ getInitials(product.prefix) }}</span>
+              </hlm-avatar>
+            </hlm-input-group-addon>
+          }
+        </hlm-combobox-input>
+        <ng-template hlmComboboxPortal>
+          <hlm-combobox-content>
+            <div hlmComboboxList>
+              @for (product of products(); track product.id) {
+                <hlm-combobox-item [value]="product.id" class="cursor-pointer">
+                  <hlm-avatar class="h-6 w-6">
+                    @if (getLogoUrl(product.logoS3Key)) {
+                      <img [src]="getLogoUrl(product.logoS3Key)" [alt]="product.name" hlmAvatarImage />
+                    }
+                    <span class="text-white bg-primary text-[10px]" hlmAvatarFallback>{{ getInitials(product.prefix) }}</span>
+                  </hlm-avatar>
+                  <span>{{ product.name }}</span>
+                </hlm-combobox-item>
+              }
+              <div hlmComboboxEmpty [class.flex!]="products().length === 0">Nessun prodotto trovato</div>
+            </div>
+          </hlm-combobox-content>
+        </ng-template>
+      </hlm-combobox>
+    }
+  </div>
+</div>

@@ -1,0 +1,43 @@
+<div hlmTableContainer>
+  <table hlmTable>
+    <thead hlmTHead>
+      <tr hlmTr class="bg-background hover:bg-background">
+        <th hlmTh>Data</th>
+        <th hlmTh>Operazione</th>
+        <th hlmTh>Esito</th>
+        <th hlmTh>Invii</th>
+        <th hlmTh>Autore</th>
+        <th hlmTh>Errore</th>
+      </tr>
+    </thead>
+    @if (operations().length > 0) {
+      <tbody hlmTBody>
+        @for (operation of operations(); track operation.id) {
+          <tr hlmTr>
+            <td hlmTd>{{ operation.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td hlmTd>{{ operation.kind | operationKind }}</td>
+            <td hlmTd><span hlmBadge variant="outline" rocketOperationState [state]="operation.state">{{ operation.state | operationState }}</span></td>
+            <td hlmTd>{{ operation.fromProduct ? '-' : operation.attempts }}</td>
+            <td hlmTd>{{ authorOf(operation) }}</td>
+            <td hlmTd>
+              @if (operation.lastError) {
+                {{ operation.lastError }}
+              } @else {
+                <span class="text-muted-foreground">-</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    } @else {
+      <caption hlmCaption>
+        <hlm-empty>
+          <hlm-empty-header>
+            <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+            <p hlmEmptyDescription>Nessuna operazione.</p>
+          </hlm-empty-header>
+        </hlm-empty>
+      </caption>
+    }
+  </table>
+</div>

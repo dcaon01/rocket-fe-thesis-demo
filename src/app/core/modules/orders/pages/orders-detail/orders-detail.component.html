@@ -1,0 +1,212 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="order()?.code ?? 'Dettaglio ordine'" [description]="blockedReason() ?? (isReseller() ? 'Segui l\'ordine, Keus approva l\'offerta e conferma la consegna.' : 'Segui l\'ordine dalla richiesta all\'erogazione.')">
+    @if (order()?.status; as status) {
+      <span headerMeta hlmBadge variant="outline" rocketOrderStatus [status]="status">{{ status | orderStatus }}</span>
+    }
+    <rocket-form-toolbar [steps]="form.steps">
+      <!-- Options menu -->
+      @if (hasMenuActions()) {
+        <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+          <ng-icon name="lucideEllipsisVertical" size="18" />
+        </button>
+      }
+      <ng-template #actionsMenu>
+        <hlm-dropdown-menu>
+          @if (canRequestQuote() && !isPrimary('requestQuote')) {
+            <button hlmDropdownMenuItem (click)="openAction('requestQuote')" [disabled]="form.changed() || isBlocked('requestQuote')">
+              <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+              <span>{{ form.changed() ? 'Salva prima di richiedere la quotazione' : 'Richiedi quotazione' }}</span>
+            </button>
+          }
+          @if (canRequestApproval() && !isPrimary('requestApproval')) {
+            <button hlmDropdownMenuItem (click)="openAction('requestApproval')" [disabled]="form.changed() || isBlocked('requestApproval')">
+              <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+              <span>{{ form.changed() ? 'Salva prima di richiedere l\'approvazione' : 'Richiedi approvazione' }}</span>
+            </button>
+          }
+          @if (canApprove()) {
+            @if (!isPrimary('approve')) {
+              <button hlmDropdownMenuItem (click)="openAction('approve')">
+                <ng-icon name="lucideCircleCheck" class="mr-2 h-4 w-4" />
+                <span>Approva offerta</span>
+              </button>
+            }
+            <button hlmDropdownMenuItem (click)="openAction('refuseApproval')">
+              <ng-icon name="lucideCircleX" class="mr-2 h-4 w-4" />
+              <span>Rifiuta approvazione</span>
+            </button>
+          }
+          @if (canGenerateOffer() && !isPrimary('offer')) {
+            <button hlmDropdownMenuItem (click)="openAction('offer')" [disabled]="form.changed() || isBlocked('offer')">
+              <ng-icon name="lucideFileText" class="mr-2 h-4 w-4" />
+              <span>{{ form.changed() ? 'Salva prima di generare l\'offerta' : 'Genera offerta' }}</span>
+            </button>
+          }
+          @if (canDownloadOffer()) {
+            <button hlmDropdownMenuItem (click)="downloadOffer()">
+              <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+              <span>Scarica offerta</span>
+            </button>
+          }
+          @if (canRecordOutcome()) {
+            @if (!isPrimary('accept')) {
+              <button hlmDropdownMenuItem (click)="openAction('accept')">
+                <ng-icon name="lucideCircleCheck" class="mr-2 h-4 w-4" />
+                <span>Registra accettazione</span>
+              </button>
+            }
+            <button hlmDropdownMenuItem (click)="openAction('refuse')">
+              <ng-icon name="lucideCircleX" class="mr-2 h-4 w-4" />
+              <span>Registra rifiuto</span>
+            </button>
+          }
+          @if (canManageFinancing()) {
+            <button hlmDropdownMenuItem (click)="openAction('financing')">
+              <ng-icon name="lucideLandmark" class="mr-2 h-4 w-4" />
+              <span>Finanziamento</span>
+            </button>
+          }
+          @if (canConfirm() && !isPrimary('confirm')) {
+            <button hlmDropdownMenuItem (click)="openAction('confirm')">
+              <ng-icon name="lucideCheck" class="mr-2 h-4 w-4" />
+              <span>Conferma ordine</span>
+            </button>
+          }
+          @if (order()?.signedOfferS3Key) {
+            <button hlmDropdownMenuItem (click)="downloadFile('ORDER_SIGNED_OFFER', order()?.signedOfferS3Key)">
+              <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+              <span>Scarica offerta firmata</span>
+            </button>
+          }
+          @if (order()?.financingContractS3Key) {
+            <button hlmDropdownMenuItem (click)="downloadFile('ORDER_FINANCING_CONTRACT', order()?.financingContractS3Key)">
+              <ng-icon name="lucideDownload" class="mr-2 h-4 w-4" />
+              <span>Scarica contratto della finanziaria</span>
+            </button>
+          }
+          @if (canCancel()) {
+            <button hlmDropdownMenuItem (click)="openAction('cancel')">
+              <ng-icon name="lucideBan" class="mr-2 h-4 w-4 text-destructive" />
+              <span class="text-destructive">Annulla ordine</span>
+            </button>
+          }
+        </hlm-dropdown-menu>
+      </ng-template>
+
+      <!-- Primary button: the changes to save, otherwise the next step of the order -->
+      @if (canEdit() && (savePending() || !nextAction())) {
+        <span class="inline-flex" [hlmTooltip]="form.isUploading() ? 'Caricamento dei file in corso' : !savePending() ? 'Nessuna modifica da salvare' : form.orderForm.invalid ? 'Completa i campi obbligatori' : ''">
+          <button hlmBtn [disabled]="form.orderForm.invalid || !savePending() || form.isUploading()" (click)="editOrder()">
+            Salva
+          </button>
+        </span>
+      } @else if (quotationPending()) {
+        <span class="inline-flex" [hlmTooltip]="form.evaluationsValue() ? '' : 'Quota o rifiuta ogni personalizzazione'">
+          <button hlmBtn [disabled]="!form.evaluationsValue()" (click)="openAction('saveQuotation')">
+            <ng-icon name="lucideCalculator" size="16" />
+            Salva quotazione
+          </button>
+        </span>
+      } @else if (nextAction(); as action) {
+        <span class="inline-flex" [hlmTooltip]="isBlocked(action) ? blockedReason() ?? '' : ''">
+          <button hlmBtn [disabled]="isBlocked(action)" (click)="openAction(action)">
+            <ng-icon [name]="primaryActions[action].icon" size="16" />
+            {{ primaryActions[action].label }}
+          </button>
+        </span>
+      }
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <!-- Order form -->
+  <rocket-order-form
+    class="flex-1 min-h-0 flex flex-col"
+    #form
+    [order]="order()"
+    [readonly]="!canEdit()"
+    [evaluating]="canEvaluateCustomizations()"
+    [offerHint]="offerHint()"
+    [customizationActions]="customizationActionsFor"
+    (customizationAction)="onCustomizationAction($event)"
+    (completeLine)="onCompleteLine($event)"
+  >
+    <!-- Offer step: the offer generated and, once uploaded, the signed one -->
+    @if (order(); as current) {
+      <div orderOffer>
+        <hlm-tabs [tab]="current.signedOfferS3Key ? offerView() : 'original'" (tabActivated)="offerView.set($event)" class="w-full">
+          @if (current.signedOfferS3Key) {
+            <!-- Horizontal on purpose: the vertical steps around would stack it -->
+            <hlm-tabs-list class="flex-row! h-9!">
+              <button hlmTabsTrigger="original" class="w-auto! justify-center!">Originale</button>
+              <button hlmTabsTrigger="signed" class="w-auto! justify-center!">Firmata</button>
+            </hlm-tabs-list>
+          }
+
+          <!-- Original -->
+          <div hlmTabsContent="original" class="flex flex-col gap-6">
+            <div hlmItem variant="outline" class="border-dashed rounded-xl">
+              <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+                <ng-icon name="lucideFileText" size="18" />
+              </div>
+              <div hlmItemContent>
+                <div hlmItemTitle>Offerta {{ current.code }}</div>
+                @if (current.offerGeneratedAt) {
+                  <p hlmItemDescription>Generata il {{ current.offerGeneratedAt | date:'dd/MM/yyyy' }}</p>
+                }
+              </div>
+              <div hlmItemActions>
+                <button hlmBtn variant="ghost" size="sm" type="button" (click)="downloadOffer()">
+                  Scarica
+                  <ng-icon hlm name="lucideDownload" size="16" />
+                </button>
+              </div>
+            </div>
+            @if (offerPreview(); as preview) {
+              @if ('html' in preview) {
+                <iframe
+                  title="Offerta"
+                  sandbox="allow-same-origin"
+                  [srcdoc]="preview.html"
+                  (load)="fitPreview($event)"
+                  scrolling="no"
+                  class="w-full min-h-[60vh] rounded-md border border-border bg-white"
+                ></iframe>
+              }
+            }
+          </div>
+
+          <!-- Signed -->
+          @if (current.signedOfferS3Key) {
+            <div hlmTabsContent="signed" class="flex flex-col gap-6">
+              <div hlmItem variant="outline" class="border-dashed rounded-xl">
+                <div hlmItemMedia variant="icon" class="rk-icon-tile size-10">
+                  <ng-icon name="lucideFileCheck" size="18" />
+                </div>
+                <div hlmItemContent>
+                  <div hlmItemTitle>Offerta firmata {{ current.code }}</div>
+                  @if (current.acceptedAt) {
+                    <p hlmItemDescription>Caricata il {{ current.acceptedAt | date:'dd/MM/yyyy' }}</p>
+                  }
+                </div>
+                <div hlmItemActions>
+                  <button hlmBtn variant="ghost" size="sm" type="button" (click)="downloadFile('ORDER_SIGNED_OFFER', current.signedOfferS3Key)">
+                    Scarica
+                    <ng-icon hlm name="lucideDownload" size="16" />
+                  </button>
+                </div>
+              </div>
+              @if (signedOfferUrl(); as url) {
+                <!-- A PDF has no height of its own: the browser viewer scrolls it -->
+                <iframe title="Offerta firmata" [src]="url" class="w-full h-[80vh] rounded-md border border-border bg-white"></iframe>
+              }
+            </div>
+          }
+        </hlm-tabs>
+      </div>
+    }
+  </rocket-order-form>
+
+  <!-- Action dialog, shared with the order list -->
+  <rocket-order-action-dialog #actionDialog (done)="order.set($event)" />
+</div>

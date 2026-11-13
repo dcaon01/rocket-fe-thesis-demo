@@ -1,0 +1,78 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Crea template" description="Crea il template in bozza: il contenuto lo scrivi nella pagina successiva.">
+    <rocket-form-toolbar [steps]="steps">
+      <span class="inline-flex" [hlmTooltip]="templateForm.invalid ? 'Completa i campi obbligatori' : !steps.allVisited() ? 'Apri prima tutte le sezioni' : ''">
+        <button hlmBtn [disabled]="templateForm.invalid || !steps.allVisited()" (click)="createTemplate()">Conferma</button>
+      </span>
+    </rocket-form-toolbar>
+  </rocket-page-header>
+
+  <!-- Form -->
+  <form [formGroup]="templateForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+    <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+      <!-- Sidebar: sezioni -->
+      <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+        <rocket-step-list [tabs]="tabs" [steps]="steps" />
+      </aside>
+
+      <!-- Right content -->
+      <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6">
+        <!-- Tipo -->
+        <div hlmTabsContent="tipo" class="flex flex-col gap-6 animate-rk-rise">
+          <div class="flex flex-col gap-1">
+            <h2 hlmCardTitle class="text-lg font-semibold">Tipo</h2>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="type">Tipo*</label>
+              <brn-select id="type" placeholder="Seleziona un tipo" formControlName="type" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (type of templateTypes; track type) {
+                    <hlm-option [value]="type">{{ type | templateType }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            </div>
+
+            @if (templateForm.value.type === 'OFFER') {
+              <div class="flex flex-col gap-2">
+                <label hlmLabel for="channel">Canale*</label>
+                <brn-select id="channel" placeholder="Seleziona un canale" formControlName="channel" class="w-full">
+                  <hlm-select-trigger class="w-full">
+                    <hlm-select-value />
+                  </hlm-select-trigger>
+                  <hlm-select-content>
+                    @for (channel of salesChannels; track channel) {
+                      <hlm-option [value]="channel">{{ channel | salesChannel }}</hlm-option>
+                    }
+                  </hlm-select-content>
+                </brn-select>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Nome -->
+        <div hlmTabsContent="nome" class="flex flex-col gap-6 animate-rk-rise">
+          <div class="flex flex-col gap-1">
+            <h2 hlmCardTitle class="text-lg font-semibold">Nome</h2>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+            <div class="flex flex-col gap-2 sm:col-span-2">
+              <label hlmLabel for="name">Nome*</label>
+              <input hlmInput id="name" formControlName="name" placeholder="Es. Offerta canale diretto 2026" autocomplete="off" />
+            </div>
+
+          </div>
+        </div>
+        @if (steps.hasFields()) {
+          <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+        }
+      </div>
+    </hlm-tabs>
+  </form>
+</div>

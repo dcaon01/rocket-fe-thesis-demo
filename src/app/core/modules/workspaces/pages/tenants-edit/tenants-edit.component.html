@@ -1,0 +1,63 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Dettaglio tenant" [description]="statusNote() ? 'Modifica dati e struttura del tenant e consultane lo storico. ' + statusNote() : 'Modifica dati e struttura del tenant e consultane lo storico.'">
+    @if (tenantData()?.status; as status) {
+      <span headerMeta hlmBadge variant="outline" rocketTenantStatus [status]="status">{{ status | tenantStatus }}</span>
+    }
+    @if (hasOpenOperation()) {
+      <span headerMeta hlmBadge variant="outline" rocketSyncState [state]="tenantData()?.syncState">{{ tenantData()?.syncState | syncState }}</span>
+    }
+    @if (canDiscard()) {
+      <button hlmBtn variant="outline" (click)="openDiscardDialog()" [disabled]="isLoading()">
+        <ng-icon name="lucideBan" class="mr-2 h-4 w-4" />
+        Scarta
+      </button>
+    }
+    @if (canResend()) {
+      <button hlmBtn [variant]="isOnProduct() ? 'outline' : 'default'" (click)="resendRequest()" [disabled]="isLoading()">
+        <ng-icon name="lucideSend" class="mr-2 h-4 w-4" />
+        Rinvia
+      </button>
+    }
+    @if (isOnProduct() && canManage()) {
+      @if (hasOpenOperation()) {
+        <!-- A disabled button fires no hover, so the tooltip sits on a wrapper -->
+        <span class="inline-flex" hlmTooltip="Un'operazione è ancora in attesa del prodotto.">
+          <button hlmBtn disabled>Conferma</button>
+        </span>
+      } @else {
+        <span class="inline-flex" [hlmTooltip]="!form?.changed() ? 'Nessuna modifica da salvare' : form?.tenantForm?.invalid ? 'Completa i campi obbligatori' : ''">
+          <button hlmBtn [disabled]="form?.tenantForm?.invalid || !form?.changed()" (click)="updateTenant(form.tenantForm)">
+            Conferma
+          </button>
+        </span>
+      }
+    }
+  </rocket-page-header>
+
+  <!-- Tenant form for editing -->
+  <rocket-tenant-form class="flex-1 min-h-0 flex flex-col" [tenantData]="tenantData()" [operations]="operations()" [readonly]="!canManage()" #form/>
+
+  <!-- Discard dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap above the footer -->
+  <hlm-dialog #discardDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>Scartare l'operazione?</h3>
+        <p hlmDialogDescription>
+          @if (isFailedCreation()) {
+            Il tenant passa ad «Annullato» insieme agli utenti che lo aspettano.
+          } @else {
+            Il tenant resta com'è sul prodotto e si può modificare di nuovo.
+          }
+        </p>
+      </hlm-dialog-header>
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="closeDiscardDialog()" [disabled]="isLoading()">Annulla</button>
+        <button hlmBtn variant="destructive" (click)="discardOperation()" [disabled]="isLoading()">
+          {{ isLoading() ? 'Caricamento...' : 'Scarta' }}
+        </button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

@@ -1,0 +1,93 @@
+<form [formGroup]="collaboratorForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs" [steps]="steps" />
+    </aside>
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6">
+      <!-- Identità -->
+      <div hlmTabsContent="identita" class="flex flex-col gap-6 animate-rk-rise">
+        <div class="flex flex-col gap-1">
+          <h2 hlmCardTitle class="text-lg font-semibold">Identità</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          @if (collaboratorData()) {
+            <!-- Photo and email, fixed once the collaborator exists -->
+            <div class="sm:col-span-2 flex items-center gap-4">
+              <hlm-avatar class="size-12">
+                @if (avatarUrl()) {
+                  <img [src]="avatarUrl()" [alt]="collaboratorData()?.name" hlmAvatarImage />
+                }
+                <span class="bg-primary" hlmAvatarFallback>{{ initials() }}</span>
+              </hlm-avatar>
+              <div class="flex flex-col gap-1 min-w-0">
+                <label hlmLabel>Email</label>
+                @if (collaboratorForm.controls.email.value; as email) {
+                  <div class="flex items-center gap-1 min-w-0">
+                    <span class="text-base font-medium truncate">{{ email }}</span>
+                    <rocket-copy-button [value]="email" />
+                  </div>
+                } @else {
+                  <span class="text-base text-muted-foreground">-</span>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="name">Nome*</label>
+            <input type="text" id="name" placeholder="Nome del collaboratore" hlmInput formControlName="name" autocomplete="off" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="familyName">Cognome*</label>
+            <input type="text" id="familyName" placeholder="Cognome del collaboratore" hlmInput formControlName="familyName" autocomplete="off" />
+          </div>
+
+          @if (isEmailEditable()) {
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="email">Email*</label>
+              <input type="email" id="email" placeholder="Email del collaboratore" hlmInput formControlName="email" autocomplete="off" />
+            </div>
+          }
+
+          <!-- Profile: next to the email while creating, to the status once the collaborator exists -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="profile">Permesso*</label>
+            <brn-select placeholder="Seleziona un permesso" formControlName="profile" class="w-full">
+              <hlm-select-trigger class="w-full">
+                <hlm-select-value />
+              </hlm-select-trigger>
+              <hlm-select-content>
+                @for (role of availableRoles(); track role) {
+                  <hlm-option [value]="role">{{ role | role }}</hlm-option>
+                }
+              </hlm-select-content>
+            </brn-select>
+          </div>
+
+          @if (collaboratorData()) {
+            <!-- Status selection -->
+            <div class="flex flex-col gap-2">
+              <label hlmLabel for="status">Stato*</label>
+              <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="enabled" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  <hlm-option [value]="true">Attivo</hlm-option>
+                  <hlm-option [value]="false">Non attivo</hlm-option>
+                </hlm-select-content>
+              </brn-select>
+            </div>
+          }
+        </div>
+      </div>
+      @if (steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

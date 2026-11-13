@@ -1,0 +1,181 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header [headerTitle]="reseller() ? 'Trasferimento aziende di ' + reseller()!.companyName : 'Trasferimento aziende'" [description]="description()">
+    <button hlmBtn (click)="transfer()" [disabled]="!canSend()">
+      {{ isSending() ? 'Caricamento...' : 'Trasferisci' }}
+    </button>
+  </rocket-page-header>
+
+  <form [formGroup]="transferForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+    <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+      <!-- Sidebar: steps -->
+      <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+        <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+      </aside>
+
+      <!-- Right content -->
+      <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="['companies', 'plans'].includes(steps.activeTab()) ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+        <!-- Destination -->
+        <div hlmTabsContent="destination" class="animate-rk-rise">
+          <div class="w-full grid grid-cols-6 gap-x-8 gap-y-8">
+            <div class="flex flex-col gap-2 col-span-2">
+              <label hlmLabel for="destination">Destinazione*</label>
+              <brn-select class="inline-block w-full" formControlName="destination">
+                <hlm-select-trigger class="w-full" id="destination">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (destination of destinations; track destination.value) {
+                    <hlm-option [value]="destination.value">{{ destination.label }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            </div>
+
+            @if (!isKeus()) {
+              <!-- Target reseller -->
+              <div class="flex flex-col gap-2 col-span-4">
+                <label hlmLabel for="resellerId">Rivenditore*</label>
+                <hlm-combobox formControlName="resellerId" [filter]="comboboxContainsFilter" [itemToString]="resellerLabel" (searchChange)="resellers.search.set($event)">
+                  <hlm-combobox-input id="resellerId" placeholder="Cerca un rivenditore attivo" />
+                  <ng-template hlmComboboxPortal>
+                    <hlm-combobox-content>
+                      <div hlmComboboxList>
+                        @for (option of resellers.options(); track option.value) {
+                          <hlm-combobox-item [value]="option.value" class="cursor-pointer">{{ option.label }}</hlm-combobox-item>
+                        }
+                        <div hlmComboboxEmpty [class.flex!]="resellers.options().length === 0">Nessun rivenditore trovato</div>
+                      </div>
+                    </hlm-combobox-content>
+                  </ng-template>
+                </hlm-combobox>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Companies -->
+        <div hlmTabsContent="companies" class="animate-rk-rise">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <thead hlmTHead>
+                <tr hlmTr class="bg-background hover:bg-background">
+                  <th hlmTh class="w-10">
+                    <hlm-checkbox aria-label="Seleziona tutte" [checked]="allSelected()" [indeterminate]="selected().length > 0 && !allSelected()" [disabled]="selectable().length === 0" (checkedChange)="toggleAll($event)" />
+                  </th>
+                  <th hlmTh>Azienda</th>
+                  <th hlmTh>Partita IVA</th>
+                  <th hlmTh>Contratti in vigore</th>
+                </tr>
+              </thead>
+              @if (candidates().length > 0) {
+                <tbody hlmTBody>
+                  @for (candidate of candidates(); track candidate.company.id) {
+                    <tr hlmTr>
+                      <td hlmTd>
+                        @if (blockedReasons().get(candidate.company.id); as reason) {
+                          <!-- A disabled checkbox fires no hover, so the tooltip sits on a wrapper -->
+                          <span class="flex" position="right" [hlmTooltip]="reason">
+                            <hlm-checkbox [aria-label]="'Seleziona ' + candidate.company.name" disabled />
+                          </span>
+                        } @else {
+                          <hlm-checkbox [aria-label]="'Seleziona ' + candidate.company.name" [checked]="selected().includes(candidate)" (checkedChange)="toggleCompany(candidate.company.id, $event)" />
+                        }
+                      </td>
+                      <td hlmTd><a hlmBtn variant="link" class="px-0!" [routerLink]="['/companies/edit', candidate.company.id]">{{ candidate.company.name }}</a></td>
+                      <td hlmTd>
+                        @if (candidate.company.vatNumber; as vatNumber) {
+                          {{ vatNumber }}
+                        } @else {
+                          <span class="text-muted-foreground">-</span>
+                        }
+                      </td>
+                      <td hlmTd>
+                        <div class="flex flex-wrap gap-2">
+                          @for (contract of candidate.contracts; track contract.id) {
+                            <span hlmBadge variant="outline">{{ productName(contract.productId) }} · {{ contract.code }}</span>
+                          } @empty {
+                            <span class="text-muted-foreground">Nessuno</span>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              } @else {
+                <caption hlmCaption>
+                  <hlm-empty>
+                    <hlm-empty-header>
+                      <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                      <p hlmEmptyDescription>{{ isLoading() ? 'Caricamento delle aziende...' : 'Nessuna azienda da trasferire.' }}</p>
+                    </hlm-empty-header>
+                  </hlm-empty>
+                </caption>
+              }
+            </table>
+          </div>
+        </div>
+
+        <!-- Plans of the direct contracts -->
+        <div hlmTabsContent="plans" class="animate-rk-rise">
+          <div hlmTableContainer>
+            <table hlmTable>
+              <thead hlmTHead>
+                <tr hlmTr class="bg-background hover:bg-background">
+                  <th hlmTh>Azienda</th>
+                  <th hlmTh>Contratto</th>
+                  <th hlmTh class="w-20">Seats</th>
+                  <th hlmTh>Piano*</th>
+                  <th hlmTh class="w-32">Sconto canone %</th>
+                </tr>
+              </thead>
+              @if (lineGroups.length > 0) {
+                <tbody hlmTBody formArrayName="lines">
+                  @for (line of lineGroups; track line; let i = $index) {
+                    <tr hlmTr [formGroupName]="i">
+                      <td hlmTd>{{ candidateOf(line.controls.companyId.value)?.company?.name }}</td>
+                      <td hlmTd>
+                        <span hlmBadge variant="outline">{{ productName(line.controls.productId.value) }} · {{ contractOf(line)?.code }}</span>
+                      </td>
+                      <td hlmTd>{{ contractOf(line)?.seats }}</td>
+                      <td hlmTd>
+                        <hlm-combobox formControlName="planId" class="min-w-40" [filter]="comboboxContainsFilter" [itemToString]="planLabel">
+                          <hlm-combobox-input placeholder="Cerca un piano" class="[&_[data-slot=input-group]]:bg-background" />
+                          <ng-template hlmComboboxPortal>
+                            <hlm-combobox-content>
+                              <div hlmComboboxList>
+                                @for (plan of plansFor(line.controls.productId.value); track plan.id) {
+                                  <hlm-combobox-item [value]="plan.id" class="cursor-pointer">{{ plan.name }}</hlm-combobox-item>
+                                }
+                                <div hlmComboboxEmpty [class.flex!]="plansFor(line.controls.productId.value).length === 0">Nessun piano disponibile</div>
+                              </div>
+                            </hlm-combobox-content>
+                          </ng-template>
+                        </hlm-combobox>
+                      </td>
+                      <td hlmTd>
+                        <input type="number" [id]="'line-recurring-discount-' + i" hlmInput formControlName="recurringDiscountPercent" step="1" min="0" max="100" autocomplete="off" />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              } @else {
+                <caption hlmCaption>
+                  <hlm-empty>
+                    <hlm-empty-header>
+                      <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+                      <p hlmEmptyDescription>Nessun contratto da riportare in gestione diretta.</p>
+                    </hlm-empty-header>
+                  </hlm-empty>
+                </caption>
+              }
+            </table>
+          </div>
+        </div>
+        @if (steps.hasFields()) {
+          <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+        }
+      </div>
+    </hlm-tabs>
+  </form>
+</div>

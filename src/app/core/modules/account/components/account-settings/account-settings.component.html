@@ -1,0 +1,208 @@
+<hlm-tabs [tab]="activeTab()" (tabActivated)="onTabActivated($event)" orientation="vertical"
+  class="grid! grid-cols-1 md:grid-cols-[248px_1fr] gap-0! h-[min(640px,88vh)]">
+  <!-- Identity rail -->
+  <aside class="hidden md:flex flex-col gap-8 p-5 bg-sidebar border-r">
+    <div class="flex flex-col items-center text-center gap-3 pt-6">
+      <hlm-avatar class="size-20">
+        @if (photoPreviewUrl() || avatarUrl()) {
+          <img [src]="photoPreviewUrl() || avatarUrl()" [alt]="fullName()" hlmAvatarImage />
+        }
+        <span class="bg-primary text-primary-foreground text-xl" hlmAvatarFallback>{{ initials() }}</span>
+      </hlm-avatar>
+      <div class="min-w-0 w-full">
+        <p class="font-semibold truncate">{{ fullName() }}</p>
+        <p class="text-xs text-muted-foreground truncate">{{ currentUser()?.email }}</p>
+      </div>
+    </div>
+
+    <hlm-tabs-list variant="line" class="w-full! items-stretch! gap-1 p-0!">
+      @for (tab of tabs; track tab.id) {
+        <button
+          [hlmTabsTrigger]="tab.id"
+          class="h-10! flex-none! justify-start! px-3 gap-3 rounded-lg! cursor-pointer after:opacity-0! text-sidebar-foreground! hover:bg-sidebar-border! data-active:bg-sidebar-accent! data-active:text-sidebar-accent-foreground!"
+        >
+          <ng-icon [name]="tab.icon" size="16" />
+          <span class="truncate">{{ tab.label }}</span>
+        </button>
+      }
+    </hlm-tabs-list>
+  </aside>
+
+  <!-- Content -->
+  <section class="flex flex-col min-h-0 min-w-0">
+    <header class="px-8 pt-7 pb-5 border-b">
+      <h2 class="text-xl font-semibold tracking-tight">{{ currentTab().label }}</h2>
+      <p class="text-sm text-muted-foreground mt-1">{{ currentTab().description }}</p>
+    </header>
+
+    <div class="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+      <!-- Personal data -->
+      <div hlmTabsContent="dati" class="flex flex-col gap-8">
+        <div
+          hlmItem
+          variant="outline"
+          class="border-dashed rounded-2xl transition-colors"
+          [class.border-destructive]="photoError()"
+          [class.opacity-60]="isSavingPersonalData()"
+          rocketFileDropZone
+          [fileDropDisabled]="isSavingPersonalData()"
+          (filesDropped)="onPhotoSelected($event[0])"
+        >
+          <div hlmItemMedia>
+            <hlm-avatar class="size-16">
+              @if (photoPreviewUrl() || avatarUrl()) {
+                <img [src]="photoPreviewUrl() || avatarUrl()" [alt]="fullName()" hlmAvatarImage />
+              }
+              <span class="bg-primary text-lg" hlmAvatarFallback>{{ initials() }}</span>
+            </hlm-avatar>
+          </div>
+
+          <div hlmItemContent>
+            @if (isSavingPersonalData()) {
+              <p class="text-sm font-medium flex items-center gap-2">
+                <ng-icon name="lucideLoader" size="16" class="animate-spin text-primary" />
+                Caricamento…
+              </p>
+            } @else if (photoPreviewUrl()) {
+              <div hlmItemTitle>Nuova foto pronta</div>
+              <p hlmItemDescription class="text-destructive">Salva per caricare</p>
+            } @else {
+              <div hlmItemTitle>Foto profilo</div>
+              <p hlmItemDescription>Trascinala qui oppure sceglila. JPEG, PNG o WebP, fino a 5 MB.</p>
+            }
+            @if (photoError()) {
+              <p class="text-destructive text-xs mt-1">{{ photoError() }}</p>
+            }
+          </div>
+
+          <div hlmItemActions>
+            @if (photoPreviewUrl()) {
+              <button type="button" hlmBtn variant="ghost" size="icon-sm" hlmTooltip="Rimuovi foto" aria-label="Rimuovi foto" (click)="removePhoto()">
+                <ng-icon name="lucideX" size="16" />
+              </button>
+            }
+            <button hlmBtn variant="outline" size="sm" type="button" (click)="photoInput.click()">
+              <ng-icon name="lucideImagePlus" size="16" />
+              {{ currentUser()?.profilePicS3Key || photoPreviewUrl() ? 'Sostituisci' : 'Scegli' }}
+            </button>
+            <input #photoInput type="file" class="hidden" accept="image/jpeg,image/png,image/webp" (change)="onPhotoChosen($event)" />
+          </div>
+        </div>
+
+        <form [formGroup]="personalDataForm" class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="name">Nome*</label>
+            <input type="text" id="name" placeholder="Il tuo nome" hlmInput formControlName="name" autocomplete="off" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="surname">Cognome*</label>
+            <input type="text" id="surname" placeholder="Il tuo cognome" hlmInput formControlName="surname" autocomplete="off" />
+          </div>
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            <label hlmLabel for="email">Email</label>
+            <input type="email" id="email" hlmInput [value]="currentUser()?.email ?? ''" disabled />
+          </div>
+        </form>
+      </div>
+
+      <!-- Security -->
+      <div hlmTabsContent="sicurezza">
+        <form [formGroup]="changePasswordForm" class="flex flex-col gap-6">
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="currentPassword">Password attuale*</label>
+            <hlm-input-group>
+              <input [type]="showCurrentPassword() ? 'text' : 'password'" id="currentPassword" placeholder="La password che usi oggi" hlmInputGroupInput
+                formControlName="currentPassword" autocomplete="current-password" />
+              <hlm-input-group-addon align="inline-end">
+                <button hlmInputGroupButton size="icon-xs" type="button" [hlmTooltip]="showCurrentPassword() ? 'Nascondi password' : 'Mostra password'" [attr.aria-label]="showCurrentPassword() ? 'Nascondi password' : 'Mostra password'" (click)="showCurrentPassword.set(!showCurrentPassword())">
+                  <ng-icon [name]="showCurrentPassword() ? 'lucideEyeOff' : 'lucideEye'" size="16" />
+                </button>
+              </hlm-input-group-addon>
+            </hlm-input-group>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="newPassword">Nuova password*</label>
+            <hlm-input-group>
+              <input [type]="showNewPassword() ? 'text' : 'password'" id="newPassword" placeholder="Nuova password" hlmInputGroupInput
+                formControlName="newPassword" autocomplete="new-password" />
+              <hlm-input-group-addon align="inline-end">
+                <button hlmInputGroupButton size="icon-xs" type="button" [hlmTooltip]="showNewPassword() ? 'Nascondi password' : 'Mostra password'" [attr.aria-label]="showNewPassword() ? 'Nascondi password' : 'Mostra password'" (click)="showNewPassword.set(!showNewPassword())">
+                  <ng-icon [name]="showNewPassword() ? 'lucideEyeOff' : 'lucideEye'" size="16" />
+                </button>
+              </hlm-input-group-addon>
+            </hlm-input-group>
+
+            <!-- Password requirements: each turns green once met -->
+            <ul class="flex flex-col gap-1.5 mt-1 text-sm">
+              <li class="flex items-center gap-2 transition-colors" [class.text-success]="passwordRequirements().hasMinLength" [class.text-muted-foreground]="!passwordRequirements().hasMinLength">
+                <ng-icon [name]="passwordRequirements().hasMinLength ? 'lucideCircleCheck' : 'lucideCircle'" size="16" />
+                Almeno 8 caratteri
+              </li>
+              <li class="flex items-center gap-2 transition-colors" [class.text-success]="passwordRequirements().hasUpperCase" [class.text-muted-foreground]="!passwordRequirements().hasUpperCase">
+                <ng-icon [name]="passwordRequirements().hasUpperCase ? 'lucideCircleCheck' : 'lucideCircle'" size="16" />
+                Una lettera maiuscola
+              </li>
+              <li class="flex items-center gap-2 transition-colors" [class.text-success]="passwordRequirements().hasNumber" [class.text-muted-foreground]="!passwordRequirements().hasNumber">
+                <ng-icon [name]="passwordRequirements().hasNumber ? 'lucideCircleCheck' : 'lucideCircle'" size="16" />
+                Un numero
+              </li>
+              <li class="flex items-center gap-2 transition-colors" [class.text-success]="passwordRequirements().hasSpecialChar" [class.text-muted-foreground]="!passwordRequirements().hasSpecialChar">
+                <ng-icon [name]="passwordRequirements().hasSpecialChar ? 'lucideCircleCheck' : 'lucideCircle'" size="16" />
+                Un carattere speciale
+              </li>
+            </ul>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="confirmPassword">Conferma password*</label>
+            <hlm-input-group>
+              <input [type]="showConfirmPassword() ? 'text' : 'password'" id="confirmPassword" placeholder="Ripeti la nuova password" hlmInputGroupInput
+                formControlName="confirmPassword" autocomplete="new-password" />
+              <hlm-input-group-addon align="inline-end">
+                <button hlmInputGroupButton size="icon-xs" type="button" [hlmTooltip]="showConfirmPassword() ? 'Nascondi password' : 'Mostra password'" [attr.aria-label]="showConfirmPassword() ? 'Nascondi password' : 'Mostra password'" (click)="showConfirmPassword.set(!showConfirmPassword())">
+                  <ng-icon [name]="showConfirmPassword() ? 'lucideEyeOff' : 'lucideEye'" size="16" />
+                </button>
+              </hlm-input-group-addon>
+            </hlm-input-group>
+
+            <!-- Match with the new password: green once the two are equal -->
+            <ul class="flex flex-col gap-1.5 mt-1 text-sm">
+              <li class="flex items-center gap-2 transition-colors" [class.text-success]="passwordsMatch()" [class.text-muted-foreground]="!passwordsMatch()">
+                <ng-icon [name]="passwordsMatch() ? 'lucideCircleCheck' : 'lucideCircle'" size="16" />
+                Le password coincidono
+              </li>
+            </ul>
+          </div>
+
+          @if (passwordErrorMessage()) {
+            <p class="text-sm text-destructive">{{ passwordErrorMessage() }}</p>
+          }
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="px-8 py-4 border-t bg-muted/50 flex items-center justify-end gap-3">
+      @switch (activeTab()) {
+        @case ('dati') {
+          <button hlmBtn (click)="savePersonalData()"
+            [disabled]="isSavingPersonalData() || personalDataForm.invalid || (!personalDataForm.dirty && !uploadedPhoto())">
+            {{ isSavingPersonalData() ? 'Salvataggio…' : 'Salva modifiche' }}
+            @if (!isSavingPersonalData()) {
+              <ng-icon name="lucideCheck" size="16" />
+            }
+          </button>
+        }
+        @case ('sicurezza') {
+          <button hlmBtn (click)="changePassword()" [disabled]="isChangingPassword() || changePasswordForm.invalid || !passwordsMatch()">
+            {{ isChangingPassword() ? 'Modifica in corso…' : 'Modifica password' }}
+            @if (!isChangingPassword()) {
+              <ng-icon name="lucideCheck" size="16" />
+            }
+          </button>
+        }
+      }
+    </footer>
+  </section>
+</hlm-tabs>

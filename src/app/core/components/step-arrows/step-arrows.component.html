@@ -1,0 +1,17 @@
+@if (steps().count() > 1) {
+  <div class="flex gap-2">
+    <!-- A disabled button fires no hover, so each tooltip sits on a wrapper; on the left, since the arrows sit at the right edge -->
+    <span class="inline-flex" position="left" [hlmTooltip]="steps().hasPrevious() ? 'Sezione precedente' : 'Questa è la prima sezione'">
+      <button hlmBtn variant="outline" size="icon" type="button" aria-label="Sezione precedente" [disabled]="!steps().hasPrevious()" (click)="steps().previous()">
+        <ng-icon hlm name="lucideChevronLeft" size="sm" />
+      </button>
+    </span>
+    @if (withNext()) {
+      <span class="inline-flex" position="left" [hlmTooltip]="steps().hasNext() ? 'Sezione successiva' : steps().nextHint()">
+        <button hlmBtn variant="outline" size="icon" type="button" aria-label="Sezione successiva" [disabled]="!steps().hasNext()" (click)="steps().next()">
+          <ng-icon hlm name="lucideChevronRight" size="sm" />
+        </button>
+      </span>
+    }
+  </div>
+}

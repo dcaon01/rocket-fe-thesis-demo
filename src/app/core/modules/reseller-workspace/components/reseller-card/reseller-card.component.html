@@ -1,0 +1,232 @@
+<form [formGroup]="companyDataForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sections -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6" [class]="['products', 'logo'].includes(steps.activeTab()) ? 'bg-transparent! border-0! ring-0! shadow-none! p-0! rounded-none! overflow-visible!' : ''">
+      <!-- Informazioni di base -->
+      <div hlmTabsContent="info" class="animate-rk-rise">
+        <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8">
+          <!-- Company name -->
+          <div class="flex flex-col gap-2 col-span-2">
+            <label hlmLabel>Ragione sociale</label>
+            <span class="text-base font-medium min-h-9 flex items-center">{{ reseller().companyName }}</span>
+          </div>
+
+          <!-- Code -->
+          <rocket-code-item label="Codice" [value]="reseller().code" />
+
+          <!-- Email -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="email">Email*</label>
+            <input type="email" id="email" placeholder="Email del rivenditore" hlmInput formControlName="email" autocomplete="off" />
+            @if (companyDataForm.controls.email.touched && companyDataForm.controls.email.errors?.['required']) {
+              <hlm-error>L'email è obbligatoria.</hlm-error>
+            }
+            @if (companyDataForm.controls.email.touched && companyDataForm.controls.email.errors?.['email']) {
+              <hlm-error>Inserisci un'email valida.</hlm-error>
+            }
+          </div>
+
+          <!-- Phone number -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="phoneNumber">Telefono</label>
+            <input type="tel" id="phoneNumber" placeholder="Es. 02 12345678" hlmInput formControlName="phoneNumber" autocomplete="off" />
+            @if (companyDataForm.controls.phoneNumber.touched && companyDataForm.controls.phoneNumber.errors?.['pattern']) {
+              <hlm-error>Formato non valido. Es: 02 12345678 o +39 02 12345678</hlm-error>
+            }
+          </div>
+
+          <!-- PEC -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="pec">PEC*</label>
+            <input type="email" id="pec" placeholder="Indirizzo PEC" hlmInput formControlName="pec" autocomplete="off" />
+            @if (companyDataForm.controls.pec.touched && companyDataForm.controls.pec.errors?.['email']) {
+              <hlm-error>Inserisci un indirizzo PEC valido.</hlm-error>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Sede e dati fiscali -->
+      <div hlmTabsContent="fiscal" class="flex flex-col gap-6 animate-rk-rise">
+        <h3 class="text-sm font-semibold">Sede legale</h3>
+        <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8" formGroupName="legalAddress">
+          <!-- Street -->
+          <div class="flex flex-col gap-2 col-span-2">
+            <label hlmLabel for="street">Indirizzo*</label>
+            <input type="text" id="street" placeholder="Via e numero civico" hlmInput formControlName="street" autocomplete="off" />
+          </div>
+
+          <!-- City -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="city">Città*</label>
+            <input type="text" id="city" placeholder="Città" hlmInput formControlName="city" autocomplete="off" />
+          </div>
+
+          <!-- Zip code -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="zipCode">CAP*</label>
+            <input type="text" id="zipCode" placeholder="5 cifre" hlmInput formControlName="zipCode" autocomplete="off" />
+            @if (companyDataForm.controls.legalAddress.controls.zipCode.touched && companyDataForm.controls.legalAddress.controls.zipCode.errors?.['pattern']) {
+              <hlm-error>Il CAP deve contenere 5 cifre.</hlm-error>
+            }
+          </div>
+
+          <!-- Province -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="province">Provincia*</label>
+            <hlm-combobox formControlName="province" [filter]="comboboxContainsFilter" [itemToString]="provinceLabel">
+              <hlm-combobox-input id="province" placeholder="Cerca una provincia" />
+              <ng-template hlmComboboxPortal>
+                <hlm-combobox-content>
+                  <div hlmComboboxList>
+                    @for (province of provinces; track province.value) {
+                      <hlm-combobox-item [value]="province.value" class="cursor-pointer">{{ province.label }}</hlm-combobox-item>
+                    }
+                    <div hlmComboboxEmpty>Nessuna provincia trovata</div>
+                  </div>
+                </hlm-combobox-content>
+              </ng-template>
+            </hlm-combobox>
+            @if (companyDataForm.controls.legalAddress.controls.province.touched && companyDataForm.controls.legalAddress.controls.province.errors?.['required']) {
+              <hlm-error>La provincia è obbligatoria.</hlm-error>
+            }
+          </div>
+
+          <!-- Country: fixed, sent as IT with every legal address -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel>Paese</label>
+            <span class="text-base font-medium min-h-9 flex items-center">{{ country }}</span>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-semibold border-t pt-6">Dati fiscali</h3>
+        <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8">
+          <!-- VAT Number -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="vatNumber">Partita IVA*</label>
+            <input type="text" id="vatNumber" placeholder="11 cifre" maxlength="11" inputmode="numeric" hlmInput formControlName="vatNumber" autocomplete="off" />
+            @if (companyDataForm.controls.vatNumber.touched && companyDataForm.controls.vatNumber.errors?.['pattern']) {
+              <hlm-error>La partita IVA deve contenere 11 cifre.</hlm-error>
+            }
+          </div>
+
+          <!-- Fiscal code -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="fiscalCode">Codice fiscale*</label>
+            <input type="text" id="fiscalCode" placeholder="16 caratteri o 11 cifre" hlmInput formControlName="fiscalCode" autocomplete="off" />
+            @if (companyDataForm.controls.fiscalCode.touched && companyDataForm.controls.fiscalCode.errors?.['pattern']) {
+              <hlm-error>Inserisci un codice fiscale valido.</hlm-error>
+            }
+          </div>
+
+          <!-- SDI -->
+          <div class="flex flex-col gap-2">
+            <label hlmLabel for="sdi">Codice SDI*</label>
+            <input type="text" id="sdi" placeholder="7 caratteri" maxlength="7" hlmInput formControlName="sdi" autocomplete="off" />
+            @if (companyDataForm.controls.sdi.touched && companyDataForm.controls.sdi.errors?.['pattern']) {
+              <hlm-error>Il codice SDI deve contenere 7 caratteri alfanumerici.</hlm-error>
+            }
+          </div>
+
+          <!-- IBAN -->
+          <div class="flex flex-col gap-2 col-span-2">
+            <label hlmLabel for="iban">IBAN</label>
+            <input type="text" id="iban" placeholder="Es. IT60X0542811101000000123456" hlmInput formControlName="iban" autocomplete="off" />
+            @if (companyDataForm.controls.iban.touched && companyDataForm.controls.iban.errors?.['pattern']) {
+              <hlm-error>Inserisci un IBAN valido.</hlm-error>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Prodotti abilitati -->
+      <div hlmTabsContent="products" class="animate-rk-rise">
+        <rocket-reseller-products [productIds]="reseller().productIds" />
+      </div>
+
+      <!-- Contratto con Keus -->
+      @if (showEconomics()) {
+        <div hlmTabsContent="contract" class="animate-rk-rise">
+          @if (contract(); as current) {
+            <div class="w-full grid grid-cols-3 gap-x-4 gap-y-8">
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Contratto</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.code }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Tipologia</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.tier | resellerTier }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Stato</label>
+                <div><span hlmBadge variant="outline" rocketContractStatus [status]="current.status">{{ current.status | contractStatus }}</span></div>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Decorrenza</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.validityDate | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Rinnovo</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ renewalDate() | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="flex flex-col gap-2 col-start-1">
+                <label hlmLabel>Canone primo anno</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.fee.firstYearCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Canone secondo anno</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.fee.secondYearCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                <label hlmLabel>Canone dal terzo anno</label>
+                <span class="text-base font-medium min-h-9 flex items-center">{{ current.fee.ongoingCents / 100 | currency:'EUR':'symbol':'1.2-2' }}</span>
+              </div>
+              @if (current.margin; as margin) {
+                <div class="flex flex-col gap-2 col-start-1">
+                  <label hlmLabel>Sconto attivazione</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ margin.activationPercent }}%</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                  <label hlmLabel>Sconto canone</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ margin.recurringPercent }}%</span>
+                </div>
+                <div class="flex flex-col gap-2">
+                  <label hlmLabel>Sconto personalizzazioni</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ margin.customizationPercent }}%</span>
+                </div>
+              }
+              @if (current.signedContractS3Key) {
+                <div class="col-span-3">
+                  <button type="button" hlmBtn variant="outline" size="sm" (click)="downloadAgreement()">
+                    <ng-icon hlm name="lucideDownload" size="16" />
+                    Scarica il contratto firmato
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <hlm-empty>
+              <hlm-empty-header>
+                <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideFileText" size="20" /></div>
+                <p hlmEmptyDescription>Nessun contratto in vigore.</p>
+              </hlm-empty-header>
+            </hlm-empty>
+          }
+        </div>
+      }
+
+      <!-- Logo -->
+      <div hlmTabsContent="logo" class="animate-rk-rise">
+        <rocket-reseller-logo [reseller]="reseller()" />
+      </div>
+      @if (editable() && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>

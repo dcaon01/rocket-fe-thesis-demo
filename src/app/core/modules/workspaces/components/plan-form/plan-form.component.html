@@ -1,0 +1,400 @@
+<form [formGroup]="planForm" class="w-full h-full flex-1 min-h-0 flex flex-col gap-6">
+  <hlm-tabs [tab]="steps.activeTab()" (tabActivated)="steps.activate($event)" orientation="vertical" class="w-full flex-row! gap-8 items-start">
+    <!-- Sidebar: sezioni -->
+    <aside class="w-56 shrink-0 sticky top-0 self-start flex flex-col gap-4">
+      <rocket-step-list [tabs]="tabs()" [steps]="steps" />
+    </aside>
+
+
+    <!-- Right content -->
+    <div hlmCard class="rk-step-panel flex-1 min-w-0 flex flex-col gap-6">
+      <!-- Informazioni -->
+      <div hlmTabsContent="info" class="animate-rk-rise">
+        <div class="w-full flex flex-col gap-6">
+        <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+          <!-- Name -->
+          <div class="flex flex-col gap-2 flex-1">
+            @if (isEditable()) {
+              <label hlmLabel for="name">Nome*</label>
+              <input type="text" id="name" placeholder="Nome del piano" hlmInput formControlName="name" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Nome</label>
+              @if (planForm.controls.name.value; as name) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ name }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Type -->
+          <div class="flex flex-col gap-2 flex-1">
+            @if (isEditable()) {
+              <label hlmLabel for="type">Tipo*</label>
+              <brn-select class="inline-block" placeholder="Seleziona un tipo" formControlName="type" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (planType of planTypes; track planType) {
+                    <hlm-option [value]="planType">{{ planType | planType }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            } @else {
+              <label hlmLabel>Tipo</label>
+              @if (planForm.controls.type.value; as type) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ type | planType }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Audience -->
+          <div class="flex flex-col gap-2 flex-1">
+            @if (isEditable()) {
+              <label hlmLabel for="audience">Destinatario*</label>
+              <brn-select class="inline-block" placeholder="Seleziona un destinatario" formControlName="audience" class="w-full">
+                <hlm-select-trigger class="w-full">
+                  <hlm-select-value />
+                </hlm-select-trigger>
+                <hlm-select-content>
+                  @for (audience of availableAudiences(); track audience) {
+                    <hlm-option [value]="audience">{{ audience | planAudience }}</hlm-option>
+                  }
+                </hlm-select-content>
+              </brn-select>
+            } @else {
+              <label hlmLabel>Destinatario</label>
+              @if (planForm.controls.audience.value; as audience) {
+                <span class="text-base font-medium min-h-9 flex items-center">{{ audience | planAudience }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Currency: fixed, so always shown as a value -->
+          <div class="flex flex-col gap-2 flex-1">
+            <label hlmLabel>Valuta</label>
+            <span class="text-base font-medium min-h-9 flex items-center">{{ planForm.controls.currency.value }}</span>
+          </div>
+
+          <!-- Description -->
+          <div class="flex flex-col gap-2 col-span-2">
+            @if (isEditable()) {
+              <label hlmLabel for="description">Descrizione</label>
+              <input type="text" id="description" placeholder="Descrizione del piano" hlmInput formControlName="description" autocomplete="off" />
+            } @else {
+              <label hlmLabel>Descrizione</label>
+              @if (planForm.controls.description.value; as description) {
+                <p class="text-base leading-relaxed whitespace-pre-line">{{ description }}</p>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          </div>
+
+          <!-- Status (only on edit) -->
+          @if (planData()) {
+            <div class="flex flex-col gap-2 flex-1">
+              @if (isStatusEditable()) {
+                <label hlmLabel for="status">Stato*</label>
+                <brn-select class="inline-block" placeholder="Seleziona uno stato" formControlName="status" class="w-full">
+                  <hlm-select-trigger class="w-full">
+                    <hlm-select-value />
+                  </hlm-select-trigger>
+                  <hlm-select-content>
+                    @for (status of availableStatuses(); track status) {
+                      <hlm-option [value]="status">{{ status | planStatus }}</hlm-option>
+                    }
+                  </hlm-select-content>
+                </brn-select>
+              } @else {
+                <label hlmLabel>Stato</label>
+                @if (planForm.controls.status.value; as status) {
+                  <div class="min-h-9 flex items-center"><span hlmBadge variant="outline" rocketPlanStatus [status]="status">{{ status | planStatus }}</span></div>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+          }
+        </div>
+        </div>
+      </div>
+
+      <!-- Tariffazione -->
+      <div hlmTabsContent="pricing" class="animate-rk-rise">
+        @if (!selectedType()) {
+          <p class="text-sm text-muted-foreground">Seleziona prima un tipo di piano nella sezione "Informazioni".</p>
+        } @else {
+          @if (isOffStripe()) {
+            <p class="text-sm text-muted-foreground mb-6">Prezzi a scopo informativo</p>
+          }
+          <div class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+            <!-- Off Stripe -->
+            <!-- Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket. -->
+            @if (integrationsEnabled) {
+              <div class="flex flex-col gap-2 flex-1">
+                @if (isEditable()) {
+                  <label hlmLabel for="offStripe">Fatturazione esterna</label>
+                  <div class="h-9 flex items-center gap-2">
+                    <hlm-switch id="offStripe" formControlName="offStripe" />
+                    <span class="text-sm text-muted-foreground">I pagamenti sono gestiti esternamente</span>
+                  </div>
+                } @else {
+                  <label hlmLabel>Fatturazione esterna</label>
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ planForm.controls.offStripe.value ? 'Sì' : 'No' }}</span>
+                }
+              </div>
+            }
+
+            <!-- Billing interval -->
+            @if (isBillingIntervalRelevant()) {
+              <div class="flex flex-col gap-2 flex-1">
+                @if (isEditable()) {
+                  <label hlmLabel for="billingInterval">Frequenza di fatturazione*</label>
+                  <brn-select class="inline-block" placeholder="Seleziona una frequenza" formControlName="billingInterval" class="w-full">
+                    <hlm-select-trigger class="w-full">
+                      <hlm-select-value />
+                    </hlm-select-trigger>
+                    <hlm-select-content>
+                      @for (interval of billingIntervals; track interval) {
+                        <hlm-option [value]="interval">{{ interval | paymentType }}</hlm-option>
+                      }
+                    </hlm-select-content>
+                  </brn-select>
+                } @else {
+                  <label hlmLabel>Frequenza di fatturazione</label>
+                  @if (planForm.controls.billingInterval.value; as interval) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ interval | paymentType }}</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                }
+              </div>
+            }
+
+            <!-- Base cost -->
+            <div class="flex flex-col gap-2 flex-1">
+              @if (isEditable()) {
+                <label hlmLabel for="baseCost">{{ isBaseCostRequired() ? 'Importo*' : 'Costo base' }}</label>
+                <input rocketMoneyInput id="baseCost" [placeholder]="isBaseCostRequired() ? 'Prezzo del piano' : 'Eventuale flat fee'" hlmInput formControlName="baseCost" />
+              } @else {
+                <label hlmLabel>{{ isBaseCostRequired() ? 'Importo' : 'Costo base' }}</label>
+                @if (planForm.controls.baseCost.value != null) {
+                  <span class="text-xl font-bold min-h-9 flex items-center">{{ planForm.controls.baseCost.value | currency:'EUR':'symbol':'1.2-2' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- Activation fee -->
+            <div class="flex flex-col gap-2 flex-1">
+              @if (isEditable()) {
+                <label hlmLabel for="activationFee">Quota di attivazione (€)</label>
+                <input rocketMoneyInput id="activationFee" placeholder="Una tantum all'erogazione" hlmInput formControlName="activationFee" />
+              } @else {
+                <label hlmLabel>Quota di attivazione</label>
+                @if (planForm.controls.activationFee.value != null) {
+                  <span class="text-xl font-bold min-h-9 flex items-center">{{ planForm.controls.activationFee.value | currency:'EUR':'symbol':'1.2-2' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- Assistance -->
+            <div class="flex flex-col gap-2 flex-1" formGroupName="assistance">
+              @if (isEditable()) {
+                <label hlmLabel for="assistanceAmount">Assistenza (€)</label>
+                <input rocketMoneyInput id="assistanceAmount" placeholder="Componente separata" hlmInput formControlName="amount" />
+              } @else {
+                <label hlmLabel>Assistenza</label>
+                @if (planForm.controls.assistance.controls.amount.value != null) {
+                  <span class="text-xl font-bold min-h-9 flex items-center">{{ planForm.controls.assistance.controls.amount.value | currency:'EUR':'symbol':'1.2-2' }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- Assistance label -->
+            <div class="flex flex-col gap-2 flex-1" formGroupName="assistance">
+              @if (isEditable()) {
+                <label hlmLabel for="assistanceLabel">Etichetta assistenza</label>
+                <input type="text" id="assistanceLabel" placeholder="Es. Assistenza 5 anni" hlmInput formControlName="label" autocomplete="off" />
+              } @else {
+                <label hlmLabel>Etichetta assistenza</label>
+                @if (planForm.controls.assistance.controls.label.value; as label) {
+                  <span class="text-base font-medium min-h-9 flex items-center">{{ label }}</span>
+                } @else {
+                  <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                }
+              }
+            </div>
+
+            <!-- Term months (only for ONE_TIME plans) -->
+            @if (isTermMonthsRelevant()) {
+              <div class="flex flex-col gap-2 flex-1">
+                @if (isEditable()) {
+                  <label hlmLabel for="termMonths">Durata (mesi)*</label>
+                  <input type="number" id="termMonths" placeholder="Durata del piano in mesi" hlmInput formControlName="termMonths" min="1" step="1" autocomplete="off" />
+                } @else {
+                  <label hlmLabel>Durata</label>
+                  @if (planForm.controls.termMonths.value != null) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ planForm.controls.termMonths.value }} mesi</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                }
+              </div>
+            } @else {
+              <!-- Notice days (recurring plans) -->
+              <div class="flex flex-col gap-2 flex-1">
+                @if (isEditable()) {
+                  <label hlmLabel for="noticeDays">Preavviso disdetta (giorni)</label>
+                  <input type="number" id="noticeDays" placeholder="Giorni prima del rinnovo" hlmInput formControlName="noticeDays" min="0" step="1" autocomplete="off" />
+                } @else {
+                  <label hlmLabel>Preavviso disdetta</label>
+                  @if (planForm.controls.noticeDays.value != null) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ planForm.controls.noticeDays.value }} giorni</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                }
+              </div>
+            }
+
+            <!-- Tiers type -->
+            @if (isTieredVolume()) {
+              <div class="flex flex-col gap-2 flex-1">
+                @if (isEditable()) {
+                  <label hlmLabel for="tiersType">Tipo di scaglione*</label>
+                  <brn-select class="inline-block" placeholder="Seleziona un tipo" formControlName="tiersType" class="w-full">
+                    <hlm-select-trigger class="w-full">
+                      <hlm-select-value />
+                    </hlm-select-trigger>
+                    <hlm-select-content>
+                      @for (tierType of tiersTypes; track tierType) {
+                        <hlm-option [value]="tierType">{{ tierType === 'SEATS' ? 'Utenti' : 'Fatturato' }}</hlm-option>
+                      }
+                    </hlm-select-content>
+                  </brn-select>
+                } @else {
+                  <label hlmLabel>Tipo di scaglione</label>
+                  @if (planForm.controls.tiersType.value; as tiersType) {
+                    <span class="text-base font-medium min-h-9 flex items-center">{{ tiersType === 'SEATS' ? 'Utenti' : 'Fatturato' }}</span>
+                  } @else {
+                    <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Tiers table (only for TIERED_VOLUME) -->
+          @if (isTieredVolume()) {
+            <div class="w-full flex gap-x-8 gap-y-8 mt-6">
+              <div hlmTableContainer>
+                <table hlmTable>
+                  <thead hlmTHead>
+                    <tr hlmTr class="bg-background hover:bg-background">
+                      @if (isEditable()) {
+                        <th hlmTh class="w-10"></th>
+                      }
+                      <th hlmTh>Valore minimo</th>
+                      <th hlmTh>Valore massimo</th>
+                      <th hlmTh>Prezzo mensile</th>
+                      @if (isEditable()) {
+                        <th hlmTh class="text-center"></th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody hlmTBody formArrayName="tiers" #tiersTableBody>
+                    @for (tier of tiersControls; track tier; let i = $index) {
+                      <tr hlmTr [formGroupName]="i">
+                        @if (isEditable()) {
+                          <td hlmTd class="cursor-move drag-handle">
+                            <div class="flex items-center justify-center p-1">
+                              <ng-icon name="lucideGripVertical" size="18" class="text-muted-foreground hover:text-foreground transition-colors" />
+                            </div>
+                          </td>
+                          <td hlmTd>
+                            @if (i === 0) {
+                              <input type="number" [id]="'tier-minValue-' + i" hlmInput [value]="0" disabled step="1" autocomplete="off" />
+                            } @else {
+                              <input type="number" [id]="'tier-minValue-' + i" placeholder="Valore minimo" hlmInput formControlName="minValue" step="1" autocomplete="off" />
+                            }
+                          </td>
+                          <td hlmTd>
+                            <input type="number" [id]="'tier-maxValue-' + i" placeholder="Valore massimo" hlmInput formControlName="maxValue" step="1" autocomplete="off" />
+                          </td>
+                          <td hlmTd>
+                            <input rocketMoneyInput [id]="'tier-price-' + i" placeholder="Prezzo" hlmInput formControlName="price" />
+                          </td>
+                          <td hlmTd class="text-right">
+                            @if (i === tiersControls.length - 1) {
+                              <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="hover:text-destructive transition-colors text-muted-foreground hover:bg-destructive/10" hlmTooltip="Elimina scaglione" aria-label="Elimina scaglione" (click)="openDeleteTierDialog(i)"><ng-icon name="lucideTrash2" size="16" /></button>
+                            }
+                          </td>
+                        } @else {
+                          <td hlmTd>{{ i === 0 ? 0 : tier.controls.minValue.value }}</td>
+                          <td hlmTd>
+                            @if (tier.controls.maxValue.value != null) {
+                              {{ tier.controls.maxValue.value }}
+                            } @else {
+                              <span class="text-muted-foreground">-</span>
+                            }
+                          </td>
+                          <td hlmTd>
+                            @if (tier.controls.price.value != null) {
+                              {{ tier.controls.price.value | currency:'EUR':'symbol':'1.2-2' }}
+                            } @else {
+                              <span class="text-muted-foreground">-</span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+                @if (isEditable()) {
+                  <div class="w-full flex justify-center items-center py-4">
+                    <button (click)="addTier($event)" hlmBtn variant="ghost">
+                      Aggiungi scaglione
+                      <ng-icon name="lucidePlus" hlm />
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+      @if ((isEditable() || isStatusEditable()) && steps.hasFields()) {
+        <p class="self-end text-xs text-muted-foreground">* Campo obbligatorio</p>
+      }
+    </div>
+  </hlm-tabs>
+</form>
+
+<!-- Delete tier dialog -->
+<hlm-dialog #dialog>
+  <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;" #dialogContent>
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>Eliminare scaglione?</h3>
+      <p hlmDialogDescription>
+        Sei sicuro di voler eliminare questo scaglione?<br>
+        Questa azione <strong>non può essere annullata.</strong>
+      </p>
+    </hlm-dialog-header>
+    <hlm-dialog-footer>
+      <button hlmBtn variant="outline" brnDialogClose (click)="closeDeleteTierDialog()">Annulla</button>
+      <button hlmBtn variant="destructive" (click)="deleteTier()">Conferma</button>
+    </hlm-dialog-footer>
+  </hlm-dialog-content>
+</hlm-dialog>

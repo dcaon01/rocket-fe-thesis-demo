@@ -1,0 +1,59 @@
+# Reusable workflow — builds the Angular app for a given environment.
+# Called by ci.yml with the target environment as input.
+name: Build app
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    # Exposes the artifact name so the caller can pass it to the deploy workflow
+    outputs:
+      artifact-name:
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-name: ${{ steps.set-output.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # Caches node_modules itself: npm ci rebuilds it from scratch every time
+      - name: Cache node_modules
+        id: modules-cache
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
+
+      # Install exact versions from lockfile, only when the cache is missing
+      - name: Install dependencies
+        if: steps.modules-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Build using the Angular configuration matching the target environment
+      - name: Build application
+        # Demo mode (INTEGRATIONS_ENABLED=false), not part of the original Rocket.
+        run: npx ng build --configuration=demo
+
+      # Upload the build output as an artifact (kept for 30 days)
+      - name: Upload build artifacts
+        id: upload
+        uses: actions/upload-artifact@v6
+        with:
+          name: rocket-${{ inputs.environment }}-${{ github.sha }}
+          path: dist/rocket-fe/
+          retention-days: 30
+
+      # Export the artifact name so downstream jobs can reference it
+      - name: Set artifact
+        id: set-output
+        run: echo "artifact-name=rocket-${{ inputs.environment }}-${{ github.sha }}" >> $GITHUB_OUTPUT

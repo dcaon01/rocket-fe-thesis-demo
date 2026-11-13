@@ -1,0 +1,78 @@
+<div [formGroup]="group()" class="w-full grid grid-cols-3 gap-x-8 gap-y-8">
+  @for (field of fields(); track field.name) {
+    @let canEdit = isFieldEditable(field);
+    @let value = group().get(field.name)?.value;
+    <div class="flex flex-col gap-2 min-w-0" [class.col-span-3]="field.type === 'OBJECT' && !field.array">
+      <!-- Name, type and lock -->
+      <div class="flex items-center justify-between gap-2">
+        <label hlmLabel [for]="canEdit ? idPrefix() + field.name : null">{{ field.name }}{{ canEdit && field.required ? '*' : '' }}</label>
+        <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
+          @if (editable() && isFieldLocked(field)) {
+            <ng-icon name="lucideLock" size="12" hlmTooltip="Non modificabile" />
+          }
+          <span class="font-mono">{{ field.type | type }}{{ field.array ? '[]' : '' }}</span>
+        </span>
+      </div>
+
+      @if (canEdit) {
+        @if (field.array) {
+          <rocket-tags-input
+            [formControlName]="field.name"
+            [inputType]="field.type === 'NUMBER' ? 'number' : 'text'"
+            placeholder="Inserisci valore nell'array"
+            [label]="field.name"
+            [required]="field.required"
+            [hideLabel]="true"
+          />
+        } @else {
+          @switch (field.type) {
+            @case ('NUMBER') {
+              <input type="number" [id]="idPrefix() + field.name" [placeholder]="field.name" hlmInput [formControlName]="field.name" step="0.01" autocomplete="off" />
+            }
+            @case ('BOOLEAN') {
+              <div class="min-h-9 flex items-center">
+                <hlm-switch [id]="idPrefix() + field.name" [formControlName]="field.name" />
+              </div>
+            }
+            @case ('OBJECT') {
+              <textarea hlmTextarea [id]="idPrefix() + field.name" [placeholder]="field.name" [formControlName]="field.name" rows="3" class="font-mono text-sm"></textarea>
+            }
+            @default {
+              <input type="text" [id]="idPrefix() + field.name" [placeholder]="field.name" hlmInput [formControlName]="field.name" autocomplete="off" />
+            }
+          }
+        }
+      } @else {
+        @if (field.array) {
+          <div class="min-h-9 flex flex-wrap items-center gap-2">
+            @for (item of value ?? []; track $index) {
+              <span hlmBadge variant="secondary" class="text-xs">{{ item }}</span>
+            } @empty {
+              <span class="text-base text-muted-foreground">-</span>
+            }
+          </div>
+        } @else {
+          @switch (field.type) {
+            @case ('BOOLEAN') {
+              <span class="text-base font-medium min-h-9 flex items-center">{{ value ? 'Sì' : 'No' }}</span>
+            }
+            @case ('OBJECT') {
+              @if (value) {
+                <pre class="font-mono text-sm whitespace-pre-wrap break-all rounded-md border bg-muted px-3 py-2">{{ value }}</pre>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+            @default {
+              @if (value != null && value !== '') {
+                <span class="text-base font-medium min-h-9 flex items-center break-all">{{ value }}</span>
+              } @else {
+                <span class="text-base text-muted-foreground min-h-9 flex items-center">-</span>
+              }
+            }
+          }
+        }
+      }
+    </div>
+  }
+</div>

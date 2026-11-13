@@ -1,0 +1,54 @@
+<div class="w-full h-full flex flex-col gap-6">
+  <!-- Page header -->
+  <rocket-page-header headerTitle="Dettaglio rivenditore" description="Modifica dati, tipologia, prodotti abilitati e documenti del rivenditore.">
+    @if (resellerData()?.overdue) {
+      <span headerMeta hlmBadge variant="outline" [class]="overdueBadgeClass">Insolvente{{ resellerData()?.overdueSince ? ' dal ' + (resellerData()?.overdueSince | date:'dd/MM/yyyy') : '' }}</span>
+    }
+    @if (accessSuspendedAt(); as suspendedAt) {
+      <span headerMeta hlmBadge variant="outline" [class]="suspendedBadgeClass">Accesso sospeso dal {{ suspendedAt | date:'dd/MM/yyyy' }}</span>
+    }
+
+    <!-- Actions menu -->
+    @if (canRestoreAccess()) {
+      <button hlmBtn variant="outline" size="icon" [hlmDropdownMenuTrigger]="actionsMenu" align="end" hlmTooltip="Altre azioni" aria-label="Altre azioni">
+        <ng-icon name="lucideEllipsisVertical" size="18" />
+      </button>
+      <ng-template #actionsMenu>
+        <hlm-dropdown-menu>
+          <button hlmDropdownMenuItem (click)="openRestoreDialog()">
+            <ng-icon name="lucideLockOpen" class="mr-2 h-4 w-4" />
+            <span>Riattiva accesso</span>
+          </button>
+        </hlm-dropdown-menu>
+      </ng-template>
+    }
+
+    @if (canTransfer() && !form?.changed()) {
+      <a hlmBtn [routerLink]="['/resellers/edit', resellerData()?.id, 'transfer']">Trasferisci aziende</a>
+    } @else if (canEdit()) {
+      <span class="inline-flex" [hlmTooltip]="!form?.changed() ? 'Nessuna modifica da salvare' : form?.resellerForm?.invalid ? 'Completa i campi obbligatori' : ''">
+        <button hlmBtn [disabled]="form?.resellerForm?.invalid || !form?.changed()" (click)="editReseller(form.resellerForm)">
+          Conferma
+        </button>
+      </span>
+    }
+  </rocket-page-header>
+
+  <!-- Reseller form for editing a reseller -->
+  <rocket-reseller-form class="flex-1 min-h-0 flex flex-col" [resellerData]="resellerData()" [readonly]="!canEdit()" #form/>
+
+  <!-- Restore confirmation dialog -->
+  <!-- hidden: the dialog opens in an overlay, its host would only add a gap above the footer -->
+  <hlm-dialog #restoreDialog class="hidden">
+    <hlm-dialog-content class="w-[500px]" *brnDialogContent="let ctx;">
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>Riattivare l'accesso?</h3>
+        <p hlmDialogDescription>Gli utenti del rivenditore tornano a usare Rocket prima dell'incasso, per esempio per un pagamento concordato. I solleciti delle fatture ancora insolute si fermano.</p>
+      </hlm-dialog-header>
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="closeRestoreDialog()" [disabled]="isRestoring()">Annulla</button>
+        <button hlmBtn (click)="restoreAccess()" [disabled]="isRestoring()">Conferma</button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
+</div>

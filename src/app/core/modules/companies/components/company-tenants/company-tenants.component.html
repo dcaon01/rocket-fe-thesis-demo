@@ -1,0 +1,93 @@
+<div class="w-full flex flex-col gap-6">
+  <!-- Filters: a div, since the section already sits inside the company form -->
+  <div [formGroup]="tenantsFilterForm" class="w-full flex gap-4 flex-wrap">
+    <!-- Search -->
+    <div class="flex flex-col gap-2 flex-1 min-w-56 max-w-72">
+      <label hlmLabel for="tenantSearch">Cerca</label>
+      <hlm-input-group>
+        <hlm-input-group-addon><ng-icon name="lucideSearch" size="16" /></hlm-input-group-addon>
+        <input type="text" id="tenantSearch" placeholder="Nome del tenant" hlmInputGroupInput formControlName="search" autocomplete="off" (keydown.enter)="$event.preventDefault(); applyFilters()" />
+      </hlm-input-group>
+    </div>
+
+    <!-- Product -->
+    <div class="flex flex-col gap-2 min-w-56">
+      <label hlmLabel for="tenantProductId">Prodotto</label>
+      <hlm-combobox formControlName="productId" [filter]="comboboxContainsFilter" [itemToString]="productLabel">
+        <hlm-combobox-input placeholder="Cerca un prodotto" />
+        <ng-template hlmComboboxPortal>
+          <hlm-combobox-content>
+            <div hlmComboboxList>
+              @for (product of products(); track product.id) {
+                <hlm-combobox-item [value]="product.id" class="cursor-pointer">{{ product.name }}</hlm-combobox-item>
+              }
+              <div hlmComboboxEmpty [class.flex!]="products().length === 0">Nessun prodotto trovato</div>
+            </div>
+          </hlm-combobox-content>
+        </ng-template>
+      </hlm-combobox>
+    </div>
+
+    <!-- Status -->
+    <div class="flex flex-col gap-2 min-w-44">
+      <label hlmLabel for="tenantStatus">Stato</label>
+      <rocket-multi-select-filter buttonId="tenantStatus" formControlName="status" [options]="statusOptions" />
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-2 items-end">
+      <button hlmBtn variant="outline" type="button" [disabled]="!canApply()" (click)="applyFilters()">Filtra</button>
+      @if (isFiltered()) {
+        <button hlmBtn variant="ghost" type="button" (click)="resetFilters()">Reset</button>
+      }
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div hlmTableContainer>
+    <table hlmTable>
+      <thead hlmTHead>
+        <tr hlmTr class="bg-background hover:bg-background">
+          <th hlmTh>Nome</th>
+          <th hlmTh>Prodotto</th>
+          <th hlmTh>Contratto</th>
+          <th hlmTh>Stato</th>
+          <th hlmTh></th>
+        </tr>
+      </thead>
+      @if (tenants().length > 0) {
+        <tbody hlmTBody>
+          @for (tenant of tenants(); track tenant.productId + tenant.id) {
+            <tr hlmTr>
+              <td hlmTd>{{ tenant.name }}</td>
+              <td hlmTd>{{ productOf(tenant) }}</td>
+              <td hlmTd>
+                @if (tenant.contractCode) {
+                  {{ tenant.contractCode }}
+                } @else {
+                  <span class="text-muted-foreground">-</span>
+                }
+              </td>
+              <td hlmTd><span hlmBadge variant="outline" rocketTenantStatus [status]="tenant.status">{{ tenant.status | tenantStatus }}</span></td>
+              <td hlmTd class="text-right flex justify-end items-center gap-1">
+                @if (canAddUserTo(tenant)) {
+                  <button hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" hlmTooltip="Aggiungi utente" aria-label="Aggiungi utente" (click)="goToCreateUser(tenant)"><ng-icon name="lucideUserPlus" size="16" /></button>
+                }
+                <button position="left" hlmBtn variant="ghost" size="icon-sm" type="button" class="text-muted-foreground hover:bg-foreground/5" [hlmTooltip]="canManage() ? 'Modifica tenant' : 'Apri tenant'" [attr.aria-label]="canManage() ? 'Modifica tenant' : 'Apri tenant'" (click)="goToTenant(tenant)"><ng-icon [name]="canManage() ? 'lucidePencil' : 'lucideEye'" size="16" /></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      } @else {
+        <caption hlmCaption>
+          <hlm-empty>
+            <hlm-empty-header>
+              <div hlmEmptyMedia variant="icon" class="rk-icon-tile"><ng-icon name="lucideInbox" size="20" /></div>
+              <p hlmEmptyDescription>Nessun tenant trovato.</p>
+            </hlm-empty-header>
+          </hlm-empty>
+        </caption>
+      }
+    </table>
+  </div>
+</div>
